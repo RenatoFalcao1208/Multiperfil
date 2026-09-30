@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiperfil • Sistema de Produção v9.1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+
+        :root {
+            --azul-escuro: #0050A0;
+            --azul-medio: #004395;
+            --cinza-aco: #728A9C;
+            --cinza-aco2: #788E9E;
+            --branco: #FFFFFF;
+            --sombra: 0 8px 20px rgba(0, 0, 0, 0.06);
+            --sombra-forte: 0 15px 35px rgba(0, 0, 0, 0.15);
+            --borda: #e9eef3;
+            --fundo-claro: #f8fafd;
+            --verde: #1e6b3b;
+            --verde-claro: #e2f0e8;
+            --amarelo: #b45f06;
+            --amarelo-claro: #fff3e0;
+            --vermelho: #c0392b;
+            --vermelho-claro: #fde8e8;
+            --roxo: #6b3fa0;
+            --roxo-claro: #f0e8f8;
+        }
+
+        body { background-color: var(--branco); color: #1e2b37; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+        /* ============ LOGIN ============ */
+        .login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #004395 0%, #0050A0 100%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; padding: 1rem; overflow-y: auto;
+        }
+        .login-card {
+            background: white; max-width: 560px; width: 100%; padding: 2.5rem 2rem;
+            border-radius: 32px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+            text-align: center; animation: slideUp 0.5s ease;
+            max-height: 95vh; overflow-y: auto;
+        }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .login-card .logo-icon {
+            margin: 0 auto 16px; width: 70px; height: 70px;
+            background: var(--cinza-aco2); color: white;
+            border-radius: 16px 16px 6px 6px;
+            display: flex; align-items: center; justify-content: center; font-size: 2rem;
+        }
+        .login-card h2 { color: var(--azul-escuro); margin-bottom: 4px; font-size: 1.8rem; letter-spacing: -0.5px; }
+        .login-card p.slogan { color: var(--azul-medio); font-size: 0.7rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; }
+        .input-group { margin-bottom: 16px; text-align: left; }
+        .input-group label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--azul-escuro); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-group input, .input-group select {
+            width: 100%; padding: 14px 16px; border: 1.5px solid #d0dbe8;
+            border-radius: 14px; font-size: 0.95rem; outline: none; transition: 0.2s; background: white;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: var(--azul-escuro); box-shadow: 0 0 0 4px rgba(0, 80, 160, 0.1); }
+        .btn-login { background: var(--azul-escuro); color: white; border: none; width: 100%; padding: 14px; border-radius: 14px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-top: 8px; }
+        .btn-login:hover { background: var(--azul-medio); transform: translateY(-2px); }
+        .login-error { color: var(--vermelho); font-size: 0.8rem; margin-top: 12px; min-height: 20px; }
+        .demo-emails { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--borda); text-align: left; max-height: 300px; overflow-y: auto; }
+        .demo-emails h4 { font-size: 0.75rem; color: var(--azul-escuro); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; position: sticky; top: 0; background: white; padding-bottom: 6px; }
+        .demo-email-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; border-radius: 10px; margin-bottom: 6px;
+            background: var(--fundo-claro); cursor: pointer; transition: 0.2s;
+            border: 1.5px solid transparent; font-size: 0.78rem;
+        }
+        .demo-email-item:hover { border-color: var(--azul-escuro); background: #eef3f9; }
+        .demo-email-item .role { font-weight: 700; color: var(--azul-escuro); font-size: 0.7rem; text-transform: uppercase; }
+        .demo-email-item .email { color: var(--cinza-aco2); font-size: 0.72rem; }
+        .legacy-badge { background: var(--amarelo-claro); color: var(--amarelo); padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-left: 6px; }
+
+        /* ============ APP ============ */
+        .app-container { display: flex; flex-direction: column; min-height: 100vh; }
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.8rem 1.5rem; background: var(--branco);
+            border-bottom: 3px solid var(--azul-escuro);
+            flex-wrap: wrap; gap: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 80, 160, 0.05);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            background: var(--cinza-aco2); color: white; padding: 6px 8px;
+            border-radius: 12px 12px 4px 4px; font-size: 1.4rem;
+            width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .brand { display: flex; flex-direction: column; }
+        .brand-name { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; color: var(--azul-escuro); line-height: 1; }
+        .brand-slogan { font-size: 0.6rem; font-weight: 600; letter-spacing: 1.2px; color: var(--azul-medio); text-transform: uppercase; margin-top: 2px; }
+        .user-area { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .role-badge {
+            background: var(--azul-escuro); color: white; padding: 4px 12px;
+            border-radius: 30px; font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .user-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: #eef3f9; padding: 6px 14px; border-radius: 40px;
+            color: var(--azul-escuro); font-weight: 500; font-size: 0.85rem;
+        }
+        .btn-logout {
+            background: transparent; border: 1.5px solid var(--azul-escuro);
+            color: var(--azul-escuro); padding: 6px 12px; border-radius: 30px;
+            font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .btn-logout:hover { background: var(--azul-escuro); color: white; }
+
+        .nav-tabs { display: flex; gap: 4px; padding: 0 1.5rem; background: var(--branco); border-bottom: 1px solid var(--borda); overflow-x: auto; }
+        .nav-tab {
+            padding: 12px 16px; border: none; background: transparent;
+            color: var(--cinza-aco); font-weight: 600; font-size: 0.82rem;
+            cursor: pointer; border-bottom: 3px solid transparent;
+            transition: 0.2s; display: flex; align-items: center;
+            gap: 6px; white-space: nowrap;
+        }
+        .nav-tab:hover { color: var(--azul-escuro); background: #f8fafd; }
+        .nav-tab.active { color: var(--azul-escuro); border-bottom-color: var(--azul-escuro); }
+
+        .content-area { flex: 1; padding: 1.5rem; max-width: 1600px; width: 100%; margin: 0 auto; }
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--branco); border-radius: 20px; padding: 1.5rem; box-shadow: var(--sombra); border: 1px solid var(--borda); margin-bottom: 1.5rem; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 10px; }
+        .card-title {
+            font-size: 1.15rem; font-weight: 700; color: var(--azul-escuro);
+            display: flex; align-items: center; gap: 10px;
+            border-left: 5px solid var(--cinza-aco); padding-left: 12px;
+        }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+        .kpi-item { background: var(--fundo-claro); border-radius: 16px; padding: 1.2rem; text-align: center; border-bottom: 3px solid var(--azul-escuro); transition: 0.2s; }
+        .kpi-item:hover { transform: translateY(-3px); box-shadow: var(--sombra); }
+        .kpi-value { font-size: 1.9rem; font-weight: 800; color: var(--azul-escuro); line-height: 1.2; }
+        .kpi-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--cinza-aco2); font-weight: 600; margin-top: 4px; }
+
+        .table-responsive { overflow-x: auto; border-radius: 14px; border: 1px solid var(--borda); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 700px; }
+        th { background: #eef3f9; color: var(--azul-escuro); font-weight: 700; padding: 12px 10px; text-align: left; white-space: nowrap; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--borda); color: #2f3e4e; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafd; }
+
+        .badge { background: #d9e7f5; color: var(--azul-escuro); padding: 4px 10px; border-radius: 30px; font-weight: 600; font-size: 0.7rem; display: inline-block; white-space: nowrap; }
+        .badge-warning { background: var(--amarelo-claro); color: var(--amarelo); }
+        .badge-success { background: var(--verde-claro); color: var(--verde); }
+        .badge-danger { background: var(--vermelho-claro); color: var(--vermelho); }
+        .badge-info { background: #e0ecff; color: var(--azul-escuro); }
+        .badge-roxo { background: var(--roxo-claro); color: var(--roxo); }
+        .badge-legacy { background: var(--amarelo-claro); color: var(--amarelo); }
+
+        .btn:disabled, .btn[disabled] { opacity: .55; cursor: not-allowed; filter: grayscale(.5); transform: none !important; box-shadow: none !important; }
+        .btn { padding: 10px 18px; border-radius: 12px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: 0.2s; border: none; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+        .btn-primary { background: var(--azul-escuro); color: white; }
+        .btn-primary:hover { background: var(--azul-medio); transform: translateY(-2px); }
+        .btn-secondary { background: transparent; border: 1.5px solid var(--azul-escuro); color: var(--azul-escuro); }
+        .btn-secondary:hover { background: var(--azul-escuro); color: white; }
+        .btn-success { background: var(--verde); color: white; }
+        .btn-success:hover { background: #155d32; transform: translateY(-2px); }
+        .btn-danger { background: var(--vermelho-claro); color: var(--vermelho); border: 1.5px solid #f5c6cb; }
+        .btn-danger:hover { background: var(--vermelho); color: white; }
+        .btn-warning { background: var(--amarelo); color: white; }
+        .btn-warning:hover { background: #924b05; transform: translateY(-2px); }
+        .btn-roxo { background: var(--roxo); color: white; }
+        .btn-roxo:hover { background: #55307a; transform: translateY(-2px); }
+        .btn-lg { padding: 16px 24px; font-size: 1rem; border-radius: 14px; }
+        .btn-xl { padding: 20px 28px; font-size: 1.1rem; border-radius: 16px; width: 100%; }
+        .barra-progresso { flex: 1; height: 10px; background: var(--borda); border-radius: 6px; overflow: hidden; min-width: 80px; }
+        .barra-preenchimento { height: 100%; border-radius: 6px; transition: width .4s; }
+        .linha-metrica { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--borda); gap: 12px; flex-wrap: wrap; }
+        .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--azul-escuro); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 12px 14px; border: 1.5px solid #d0dbe8; border-radius: 12px;
+            font-size: 0.9rem; outline: none; transition: 0.2s; font-family: inherit;
+            background: var(--branco); width: 100%;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--azul-escuro); box-shadow: 0 0 0 4px rgba(0, 80, 160, 0.08); }
+        .form-actions { display: flex; gap: 10px; margin-top: 1rem; flex-wrap: wrap; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 64, 128, 0.6); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 500; padding: 1rem;
+        }
+        .modal { background: white; max-width: 700px; width: 100%; padding: 2rem; border-radius: 24px; box-shadow: var(--sombra-forte); max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+        .modal-lg { max-width: 950px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-header h3 { color: var(--azul-escuro); font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+        .modal-close { background: transparent; border: none; font-size: 1.5rem; color: var(--cinza-aco); cursor: pointer; transition: 0.2s; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .modal-close:hover { background: var(--vermelho-claro); color: var(--vermelho); }
+
+        .chat-toggle {
+            position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px;
+            border-radius: 50%; background: var(--azul-escuro); color: white;
+            border: none; cursor: pointer; box-shadow: 0 8px 20px rgba(0, 80, 160, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; transition: 0.3s; z-index: 300;
+        }
+        .chat-toggle:hover { background: var(--azul-medio); transform: scale(1.1); }
+        .chat-toggle .badge-notif {
+            position: absolute; top: -4px; right: -4px;
+            background: #e74c3c; color: white; border-radius: 50%;
+            width: 22px; height: 22px; font-size: 0.7rem;
+            display: flex; align-items: center; justify-content: center; font-weight: 700;
+        }
+        .chat-panel {
+            position: fixed; bottom: 100px; right: 24px;
+            width: 420px; max-width: calc(100vw - 48px);
+            height: 560px; max-height: calc(100vh - 140px);
+            background: white; border-radius: 20px; box-shadow: var(--sombra-forte);
+            display: flex; flex-direction: column; overflow: hidden; z-index: 250;
+            transform: translateY(20px) scale(0.95); opacity: 0; pointer-events: none;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .chat-panel.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: all; }
+        .chat-header { background: var(--azul-escuro); color: white; padding: 1rem 1.2rem; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.95rem; }
+        .chat-messages { flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fbfdff; }
+        .message { max-width: 85%; padding: 10px 14px; border-radius: 16px; font-size: 0.83rem; line-height: 1.4; word-break: break-word; }
+        .message-in { align-self: flex-start; background: #f0f4fa; color: #1e2b37; border-bottom-left-radius: 4px; border-left: 3px solid var(--cinza-aco); }
+        .message-out { align-self: flex-end; background: var(--azul-escuro); color: white; border-bottom-right-radius: 4px; }
+        .message-ia { align-self: flex-start; background: #e8f4fd; color: #1e2b37; border-bottom-left-radius: 4px; border-left: 3px solid var(--azul-escuro); }
+        .message-info { font-size: 0.62rem; margin-bottom: 3px; opacity: 0.75; display: flex; gap: 6px; align-items: center; }
+        .message-out .message-info { color: #d9e7f5; justify-content: flex-end; }
+        .chat-input-area { display: flex; padding: 0.8rem; background: white; border-top: 1px solid var(--borda); gap: 8px; }
+        .chat-input-area input { flex: 1; padding: 10px 14px; border: 1px solid #d0dbe8; border-radius: 40px; outline: none; font-size: 0.85rem; background: var(--fundo-claro); }
+        .btn-send { background: var(--azul-escuro); border: none; color: white; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; flex-shrink: 0; }
+        .btn-send:hover { background: var(--azul-medio); }
+
+        .chat-seletor {
+            display: flex; gap: 6px; padding: 8px 12px;
+            background: var(--fundo-claro); border-bottom: 1px solid var(--borda);
+        }
+        .chat-seletor button { flex: 1; padding: 8px 10px; border-radius: 10px; border: 1.5px solid transparent; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; background: white; color: var(--cinza-aco); }
+        .chat-seletor button.ativo { background: var(--azul-escuro); color: white; border-color: var(--azul-escuro); }
+        .chat-setores {
+            padding: 8px 12px; background: white; border-bottom: 1px solid var(--borda);
+        }
+        .chat-setores select {
+            width: 100%; padding: 8px 10px; border-radius: 8px;
+            border: 1.5px solid #d0dbe8; font-size: 0.8rem; outline: none;
+            background: var(--fundo-claro);
+        }
+        .ia-aviso {
+            padding: 8px 12px; background: #e8f4fd; border-bottom: 1px solid var(--borda);
+            display: flex; align-items: center; gap: 8px; font-size: 0.78rem;
+        }
+        .ia-aviso i { color: var(--azul-escuro); font-size: 1.2rem; }
+        .ia-aviso strong { color: var(--azul-escuro); display: block; font-size: 0.82rem; }
+        .typing-indicator { display: flex; gap: 3px; padding: 8px 12px; }
+        .typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background: var(--cinza-aco); animation: bounce 1.4s infinite; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+
+        .alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; }
+        .alert-success { background: var(--verde-claro); color: var(--verde); border-left: 4px solid var(--verde); }
+        .alert-error { background: var(--vermelho-claro); color: var(--vermelho); border-left: 4px solid var(--vermelho); }
+        .alert-info { background: #d9e7f5; color: var(--azul-escuro); border-left: 4px solid var(--azul-escuro); }
+        .alert-warning { background: var(--amarelo-claro); color: var(--amarelo); border-left: 4px solid var(--amarelo); }
+        .alert-roxo { background: var(--roxo-claro); color: var(--roxo); border-left: 4px solid var(--roxo); }
+
+        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--cinza-aco); }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; color: #d0dbe8; }
+        .empty-state p { font-size: 0.9rem; }
+
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+        .info-block { background: var(--fundo-claro); padding: 1rem; border-radius: 14px; border-left: 4px solid var(--cinza-aco); }
+        .info-block-label { font-size: 0.7rem; text-transform: uppercase; color: var(--cinza-aco2); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .info-block-value { font-size: 1rem; font-weight: 700; color: var(--azul-escuro); }
+
+        .clock-display { background: linear-gradient(135deg, var(--azul-escuro), var(--azul-medio)); color: white; padding: 2rem; border-radius: 20px; text-align: center; margin-bottom: 1.5rem; box-shadow: 0 10px 30px rgba(0, 80, 160, 0.3); }
+        .clock-time { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+        .clock-date { font-size: 1rem; opacity: 0.9; margin-top: 8px; font-weight: 500; letter-spacing: 0.5px; text-transform: capitalize; }
+        .clock-label { font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; font-weight: 600; }
+
+        .op-card { background: var(--branco); border: 2px solid var(--borda); border-radius: 18px; padding: 1.2rem; margin-bottom: 1rem; transition: 0.2s; }
+        .op-card:hover { border-color: var(--azul-escuro); box-shadow: var(--sombra); }
+        .op-card.em-andamento { border-color: var(--azul-escuro); background: #f0f7ff; }
+        .op-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px; }
+        .op-card-numero { font-size: 1.2rem; font-weight: 800; color: var(--azul-escuro); }
+        .op-card-produto { font-size: 0.9rem; color: #2f3e4e; margin-top: 4px; }
+        .op-card-badge { background: var(--azul-escuro); color: white; padding: 4px 12px; border-radius: 30px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+
+        .painel-andamento { background: linear-gradient(135deg, #0050A0, #004395); color: white; padding: 1.5rem; border-radius: 18px; margin-bottom: 1rem; }
+        .painel-andamento .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8; font-weight: 600; }
+        .painel-andamento .hora-grande { font-size: 3rem; font-weight: 800; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; margin: 6px 0; }
+        .painel-andamento .data-info { font-size: 0.85rem; opacity: 0.9; }
+
+        .formula-box { background: var(--amarelo-claro); border: 2px dashed var(--amarelo); border-radius: 16px; padding: 1.5rem; margin: 1rem 0; }
+        .formula-title { font-size: 1rem; font-weight: 800; color: var(--amarelo); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+        .formula-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #f0d9b3; font-size: 0.9rem; }
+        .formula-item:last-child { border-bottom: none; }
+        .formula-item .name { font-weight: 600; color: #6b4a1f; }
+        .formula-item .value { font-weight: 800; color: var(--amarelo); font-family: 'Courier New', monospace; }
+
+        .misturadores-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+        .misturador-card { border-radius: 18px; padding: 1.5rem; border: 2px solid; text-align: center; transition: 0.3s; }
+        .misturador-card.funcionando { background: var(--verde-claro); border-color: var(--verde); }
+        .misturador-card.defeito { background: var(--vermelho-claro); border-color: var(--vermelho); }
+        .misturador-card.standby { background: var(--amarelo-claro); border-color: var(--amarelo); }
+        .misturador-card.desligado { background: #e8e8e8; border-color: #999; }
+        .misturador-icon { font-size: 2.5rem; margin-bottom: 8px; }
+        .misturador-card.funcionando .misturador-icon { color: var(--verde); }
+        .misturador-card.defeito .misturador-icon { color: var(--vermelho); }
+        .misturador-card.standby .misturador-icon { color: var(--amarelo); }
+        .misturador-card.desligado .misturador-icon { color: #666; }
+        .misturador-nome { font-size: 1.1rem; font-weight: 800; color: var(--azul-escuro); margin-bottom: 4px; }
+        .misturador-status { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .misturador-card.funcionando .misturador-status { color: var(--verde); }
+        .misturador-card.defeito .misturador-status { color: var(--vermelho); }
+        .misturador-card.standby .misturador-status { color: var(--amarelo); }
+        .misturador-card.desligado .misturador-status { color: #666; }
+        .misturador-obs { font-size: 0.75rem; color: #555; margin-top: 8px; font-style: italic; }
+
+        footer { text-align: center; padding: 1rem; font-size: 0.7rem; color: var(--cinza-aco2); border-top: 1px solid var(--borda); background: var(--branco); }
+
+        .tempo-decorrido { background: var(--verde-claro); border: 2px solid var(--verde); border-radius: 14px; padding: 1rem; text-align: center; margin: 1rem 0; }
+        .tempo-decorrido .label { font-size: 0.7rem; text-transform: uppercase; color: var(--verde); letter-spacing: 1px; font-weight: 700; }
+        .tempo-decorrido .valor { font-size: 2rem; font-weight: 800; color: var(--verde); font-variant-numeric: tabular-nums; }
+
+        .timeline-op { display: flex; justify-content: space-between; margin: 1.5rem 0; position: relative; flex-wrap: wrap; gap: 10px; }
+        .timeline-etapa { flex: 1; min-width: 90px; text-align: center; padding: 0 5px; }
+        .timeline-circle { width: 42px; height: 42px; border-radius: 50%; background: #e2e8f0; color: var(--cinza-aco); display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-weight: 700; border: 3px solid white; box-shadow: 0 0 0 1px #e2e8f0; transition: 0.3s; font-size: 1rem; }
+        .timeline-etapa.completa .timeline-circle { background: var(--verde); color: white; box-shadow: 0 0 0 1px var(--verde); }
+        .timeline-etapa.atual .timeline-circle { background: var(--azul-escuro); color: white; box-shadow: 0 0 0 3px rgba(0, 80, 160, 0.2); animation: pulse 1.5s infinite; }
+        .timeline-etapa.retrocedida .timeline-circle { background: var(--vermelho); color: white; box-shadow: 0 0 0 1px var(--vermelho); }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 80, 160, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(0, 80, 160, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 80, 160, 0); } }
+        .timeline-label { font-size: 0.7rem; font-weight: 600; color: var(--cinza-aco); text-transform: uppercase; letter-spacing: 0.5px; }
+        .timeline-etapa.completa .timeline-label, .timeline-etapa.atual .timeline-label { color: var(--azul-escuro); }
+
+        .log-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--borda); align-items: flex-start; }
+        .log-item:last-child { border-bottom: none; }
+        .log-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #eef3f9; color: var(--azul-escuro); font-size: 0.9rem; }
+        .log-icon.vermelho { background: var(--vermelho-claro); color: var(--vermelho); }
+        .log-icon.verde { background: var(--verde-claro); color: var(--verde); }
+        .log-icon.amarelo { background: var(--amarelo-claro); color: var(--amarelo); }
+        .log-icon.roxo { background: var(--roxo-claro); color: var(--roxo); }
+        .log-content { flex: 1; }
+        .log-title { font-weight: 600; font-size: 0.85rem; color: #2f3e4e; }
+        .log-meta { font-size: 0.7rem; color: var(--cinza-aco2); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+        @media (max-width: 768px) {
+            header { padding: 0.7rem 1rem; }
+            .brand-name { font-size: 1.3rem; }
+            .logo-icon { width: 40px; height: 40px; font-size: 1.2rem; }
+            .nav-tabs { padding: 0 0.5rem; }
+            .nav-tab { padding: 10px 10px; font-size: 0.75rem; }
+            .content-area { padding: 1rem; }
+            .card { padding: 1.2rem; }
+            .user-badge span { display: none; }
+            .role-badge span { display: none; }
+            .chat-panel { right: 12px; left: 12px; width: auto; bottom: 90px; height: 70vh; }
+            .chat-toggle { bottom: 16px; right: 16px; width: 54px; height: 54px; }
+            .clock-time { font-size: 2.5rem; }
+            .painel-andamento .hora-grande { font-size: 2.2rem; }
+        }
+        @media (max-width: 480px) {
+            .brand-slogan { display: none; }
+            .modal { padding: 1.5rem; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .hidden { display: none !important; }
+        .text-small { font-size: 0.72rem; color: var(--cinza-aco2); }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- ============ LOGIN ============ -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="logo-icon"><i class="fas fa-building"></i></div>
+            <h2>multiperfil</h2>
+            <p class="slogan">CONSTRUÇÃO SEM LIMITES</p>
+
+            <div class="input-group">
+                <label><i class="fas fa-user-tag"></i> Perfil de Acesso</label>
+                <select id="loginRole" onchange="preencherEmail()">
+                    <option value="">Selecione um perfil...</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label><i class="fas fa-envelope"></i> E-mail</label>
+                <input type="email" id="loginEmail" placeholder="selecione um perfil ou digite">
+            </div>
+            <div class="input-group">
+                <label><i class="fas fa-lock"></i> Senha</label>
+                <input type="password" id="loginPassword" value="123456789">
+            </div>
+            <button class="btn-login" id="btnLogin">Acessar Sistema</button>
+            <div id="loginError" class="login-error"></div>
+
+            <div class="demo-emails" id="demoEmails"></div>
+        </div>
+    </div>
+
+    <!-- ============ APP ============ -->
+    <div id="appContainer" class="app-container hidden">
+        <header>
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fas fa-building"></i></div>
+                <div class="brand">
+                    <span class="brand-name">multiperfil</span>
+                    <span class="brand-slogan">CONSTRUÇÃO SEM LIMITES</span>
+                </div>
+            </div>
+            <div class="user-area">
+                <div class="role-badge" id="roleBadge">
+                    <i class="fas fa-user-tag"></i> <span id="roleLabel">Perfil</span>
+                </div>
+                <div class="user-badge">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="userDisplayEmail">email@multiperfil.com</span>
+                </div>
+                <button class="btn-logout" id="btnLogout"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            </div>
+        </header>
+
+        <nav class="nav-tabs" id="navTabs"></nav>
+        <main class="content-area" id="contentArea"></main>
+        <footer>
+            <i class="fas fa-leaf"></i> Multiperfil • Construção a seco • Sistema de Produção v9.1 • Compatível com versões anteriores
+        </footer>
+    </div>
+
+    <!-- ============ CHAT ============ -->
+    <button class="chat-toggle hidden" id="chatToggle">
+        <i class="fas fa-comments"></i>
+        <span class="badge-notif hidden" id="chatBadge">0</span>
+    </button>
+
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <i class="fas fa-comments"></i>
+            <span>Comunicação</span>
+        </div>
+        <div class="chat-seletor">
+            <button id="tabSetores" class="ativo" onclick="setChatModo(false)">
+                <i class="fas fa-users"></i> Setores
+            </button>
+            <button id="tabIA" onclick="setChatModo(true)">
+                <i class="fas fa-robot"></i> IA Assistente
+            </button>
+        </div>
+        <div class="chat-setores" id="chatSetores">
+            <select id="seletorSetor" onchange="mudarSetorChat(this.value)">
+                <option value="todos">📢 Todos os Setores</option>
+                <option value="PCP">📋 PCP</option>
+                <option value="Mistura">🧪 Mistura</option>
+                <option value="Qualidade">🔬 Qualidade</option>
+                <option value="Envase">📦 Envase</option>
+                <option value="Laboratório">🧬 Laboratório</option>
+                <option value="Estoque">📊 Estoque</option>
+                <option value="Manutenção">🔧 Manutenção</option>
+                <option value="Administração">👑 Administração</option>
+            </select>
+        </div>
+        <div class="ia-aviso hidden" id="iaAviso">
+            <i class="fas fa-robot"></i>
+            <div>
+                <strong>IA Assistente Multiperfil</strong>
+                <span class="text-small">Pergunte sobre fórmulas, processos, qualidade, segurança...</span>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Digite uma mensagem..." autocomplete="off">
+            <button class="btn-send" id="btnSendMessage"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- ============ MODAL ============ -->
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ==========================================================
+            // ⚙️ CONFIGURAÇÃO POWER AUTOMATE (mantida compatível)
+            // ==========================================================
+            const POWER_AUTOMATE = {
+                WEBHOOK_PERDAS: 'https://prod-XX.westus.logic.azure.com:443/workflows/SUBSTITUA_AQUI/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SUBSTITUA_AQUI',
+                WEBHOOK_ESTOQUE: 'https://prod-XX.westus.logic.azure.com:443/workflows/SUBSTITUA_AQUI/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SUBSTITUA_AQUI',
+                WEBHOOK_RELATORIO: 'https://prod-XX.westus.logic.azure.com:443/workflows/SUBSTITUA_AQUI/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SUBSTITUA_AQUI',
+                WEBHOOK_IA: 'https://prod-XX.westus.logic.azure.com:443/workflows/SUBSTITUA_AQUI/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SUBSTITUA_AQUI',
+                WEBHOOK_CHAT_IA: 'https://prod-XX.westus.logic.azure.com:443/workflows/SUBSTITUA_AQUI/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SUBSTITUA_AQUI',
+                ATIVO: true
+            };
+
+            const PA_CONFIGURADO = POWER_AUTOMATE.ATIVO &&
+                !POWER_AUTOMATE.WEBHOOK_CHAT_IA.includes('SUBSTITUA_AQUI');
+
+            // ==========================================================
+            // 🔄 COMPATIBILIDADE COM VERSÕES ANTIGAS
+            // Mapeia chaves antigas para as novas
+            // ==========================================================
+            const LEGACY_MAP = {
+                'multiperfil_chat_v7': 'multiperfil_chat_v9',
+                'multiperfil_chat_ia_v1': 'multiperfil_chat_ia_v9',
+                'multiperfil_ops_v7': 'multiperfil_ops_v9',
+                'multiperfil_misturadores_v7': 'multiperfil_misturadores_v9',
+                'multiperfil_produtos_v7': 'multiperfil_produtos_v9',
+                'multiperfil_entradas_v7': 'multiperfil_entradas_v9',
+                'multiperfil_saidas_v7': 'multiperfil_saidas_v9',
+                'multiperfil_lotes_v7': 'multiperfil_lotes_v9',
+                'multiperfil_perdas_v7': 'multiperfil_perdas_v9',
+                'multiperfil_chat_v6': 'multiperfil_chat_v9',
+                'multiperfil_ops_v6': 'multiperfil_ops_v9',
+                'multiperfil_misturadores_v6': 'multiperfil_misturadores_v9',
+                'multiperfil_produtos_v6': 'multiperfil_produtos_v9',
+                'multiperfil_entradas_v6': 'multiperfil_entradas_v9',
+                'multiperfil_saidas_v6': 'multiperfil_saidas_v9',
+                'multiperfil_lotes_v6': 'multiperfil_lotes_v9',
+                'multiperfil_perdas_v6': 'multiperfil_perdas_v9'
+            };
+
+            function migrarDadosLegados() {
+                let migrou = false;
+                Object.entries(LEGACY_MAP).forEach(([antiga, nova]) => {
+                    const dadosAntigos = localStorage.getItem(antiga);
+                    const dadosNovos = localStorage.getItem(nova);
+                    // Só migra se a nova chave não existir ou estiver vazia
+                    if (dadosAntigos && (!dadosNovos || dadosNovos === '[]' || dadosNovos === 'null')) {
+                        try {
+                            // Validar JSON
+                            JSON.parse(dadosAntigos);
+                            localStorage.setItem(nova, dadosAntigos);
+                            migrou = true;
+                            console.log(`✅ Dados migrados: ${antiga} → ${nova}`);
+                        } catch (e) {
+                            console.warn(`⚠️ Falha ao migrar ${antiga}:`, e);
+                        }
+                    }
+                });
+                return migrou;
+            }
+
+            // Aplicar migração imediatamente
+            const MIGROU = migrarDadosLegados();
+            if (MIGROU) {
+                setTimeout(() => {
+                    if (confirm('📦 Dados de uma versão anterior foram detectados e migrados automaticamente.\n\nDeseja manter uma cópia dos dados antigos? (Eles continuarão no localStorage)')) {
+                        console.log('✅ Backup legado mantido no localStorage.');
+                    }
+                }, 500);
+            }
+
+            // ==========================================================
+            // 🎯 CARGOS (com permissões granulares)
+            // ==========================================================
+            const CARGOS = {
+                admin: {
+                    label: 'Administrador', icon: 'fa-user-shield', cor: 'var(--azul-escuro)',
+                    tipo: 'gestor', podeCadastrarProduto: true, podeCadastrarUsuario: true,
+                    podeExcluir: true, podeRetroceder: true, podeCentralControle: true, podeRegistrarPerda: true,
+                    paginas: ['inicio', 'ops_pcp', 'central_controle', 'misturadores_admin', 'operarios',
+                              'usuarios', 'laboratorio', 'perdas', 'eficiencia', 'produtos',
+                              'entradas', 'lotes', 'historico', 'chat']
+                },
+                pcp: {
+                    label: 'PCP', icon: 'fa-tasks', cor: 'var(--azul-escuro)', tipo: 'gestor',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: true, podeCentralControle: true, podeRegistrarPerda: false,
+                    paginas: ['inicio', 'ops_pcp', 'central_controle', 'eficiencia', 'historico', 'chat']
+                },
+                tecnico_quimica: {
+                    label: 'Técnico em Química', icon: 'fa-flask', cor: 'var(--roxo)', tipo: 'gestor',
+                    podeCadastrarProduto: true, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: true, podeCentralControle: false, podeRegistrarPerda: true,
+                    paginas: ['inicio', 'qualidade', 'laboratorio', 'mistura_monitor', 'perdas',
+                              'eficiencia', 'produtos', 'historico', 'chat']
+                },
+                laboratorista: {
+                    label: 'Laboratorista', icon: 'fa-microscope', cor: 'var(--cinza-aco)', tipo: 'gestor',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: true, podeCentralControle: false, podeRegistrarPerda: true,
+                    paginas: ['inicio', 'laboratorio', 'perdas', 'eficiencia', 'historico', 'chat']
+                },
+                estoque: {
+                    label: 'Estoque', icon: 'fa-warehouse', cor: 'var(--azul-medio)', tipo: 'gestor',
+                    podeCadastrarProduto: true, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: false, podeCentralControle: false, podeRegistrarPerda: true,
+                    paginas: ['inicio', 'produtos', 'entradas', 'lotes', 'perdas', 'historico', 'chat']
+                },
+                expedicao: {
+                    label: 'Expedição', icon: 'fa-truck', cor: 'var(--azul-medio)', tipo: 'gestor',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: false, podeCentralControle: false, podeRegistrarPerda: false,
+                    paginas: ['inicio', 'saidas', 'lotes', 'historico', 'chat']
+                },
+                manutencao: {
+                    label: 'Manutenção', icon: 'fa-tools', cor: 'var(--amarelo)', tipo: 'gestor',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: false, podeCentralControle: true, podeRegistrarPerda: true,
+                    paginas: ['inicio', 'central_controle', 'misturadores_admin', 'perdas', 'historico', 'chat']
+                },
+                operador_mistura: {
+                    label: 'Operador de Mistura', icon: 'fa-flask', cor: 'var(--azul-escuro)',
+                    tipo: 'operario', setor: 'mistura',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: true, podeCentralControle: false, podeRegistrarPerda: false,
+                    paginas: ['inicio_operario', 'historico']
+                },
+                operador_envase: {
+                    label: 'Operador de Envase', icon: 'fa-fill-drip', cor: 'var(--azul-medio)',
+                    tipo: 'operario', setor: 'envase',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: true, podeCentralControle: false, podeRegistrarPerda: false,
+                    paginas: ['inicio_operario', 'historico']
+                },
+                // ====== CARGOS LEGADOS (compatibilidade) ======
+                laboratorio_legacy: {
+                    label: 'Laboratório (Legado)', icon: 'fa-microscope', cor: 'var(--cinza-aco)', tipo: 'gestor',
+                    podeCadastrarProduto: false, podeCadastrarUsuario: false, podeExcluir: false,
+                    podeRetroceder: true, podeCentralControle: false, podeRegistrarPerda: true,
+                    paginas: ['inicio', 'laboratorio', 'perdas', 'eficiencia', 'historico', 'chat']
+                }
+            };
+
+            // ==========================================================
+            // 👥 USUÁRIOS (novos + legados)
+            // ==========================================================
+            const USUARIOS_DEFAULT = [
+                // ====== ADMINISTRADORES ======
+                { id: 'u1', nome: 'Carlos Andrade', email: 'carlos.andrade.admin@multiperfil.com', senha: '123456789', cargo: 'admin', turno: 'Manhã' },
+                { id: 'u2', nome: 'Fernanda Lima', email: 'fernanda.lima.admin@multiperfil.com', senha: '123456789', cargo: 'admin', turno: 'Tarde' },
+                // ====== PCP ======
+                { id: 'u3', nome: 'Roberto Silva', email: 'roberto.silva.pcp@multiperfil.com', senha: '123456789', cargo: 'pcp', turno: 'Manhã' },
+                { id: 'u4', nome: 'Juliana Costa', email: 'juliana.costa.pcp@multiperfil.com', senha: '123456789', cargo: 'pcp', turno: 'Tarde' },
+                // ====== TÉCNICOS EM QUÍMICA ======
+                { id: 'u5', nome: 'Dr. Marcos Pereira', email: 'marcos.pereira.quimica@multiperfil.com', senha: '123456789', cargo: 'tecnico_quimica', turno: 'Manhã' },
+                { id: 'u6', nome: 'Dra. Beatriz Santos', email: 'beatriz.santos.quimica@multiperfil.com', senha: '123456789', cargo: 'tecnico_quimica', turno: 'Tarde' },
+                // ====== LABORATORISTAS ======
+                { id: 'u7', nome: 'Ana Rodrigues', email: 'ana.rodrigues.lab@multiperfil.com', senha: '123456789', cargo: 'laboratorista', turno: 'Manhã' },
+                { id: 'u8', nome: 'Paulo Mendes', email: 'paulo.mendes.lab@multiperfil.com', senha: '123456789', cargo: 'laboratorista', turno: 'Tarde' },
+                // ====== ESTOQUE ======
+                { id: 'u9', nome: 'Sandra Oliveira', email: 'sandra.oliveira.estoque@multiperfil.com', senha: '123456789', cargo: 'estoque', turno: 'Manhã' },
+                { id: 'u10', nome: 'Ricardo Alves', email: 'ricardo.alves.estoque@multiperfil.com', senha: '123456789', cargo: 'estoque', turno: 'Tarde' },
+                // ====== EXPEDIÇÃO ======
+                { id: 'u11', nome: 'Marcelo Souza', email: 'marcelo.souza.expedicao@multiperfil.com', senha: '123456789', cargo: 'expedicao', turno: 'Manhã' },
+                { id: 'u12', nome: 'Tatiane Rocha', email: 'tatiane.rocha.expedicao@multiperfil.com', senha: '123456789', cargo: 'expedicao', turno: 'Tarde' },
+                // ====== MANUTENÇÃO ======
+                { id: 'u13', nome: 'José Ferreira', email: 'jose.ferreira.manutencao@multiperfil.com', senha: '123456789', cargo: 'manutencao', turno: 'Manhã' },
+                { id: 'u14', nome: 'Antônio Barbosa', email: 'antonio.barbosa.manutencao@multiperfil.com', senha: '123456789', cargo: 'manutencao', turno: 'Tarde' },
+                // ====== OPERADORES DE MISTURA ======
+                { id: 'u15', nome: 'João Silva', email: 'joao.silva.mistura@multiperfil.com', senha: '123456789', cargo: 'operador_mistura', turno: 'Manhã' },
+                { id: 'u16', nome: 'Pedro Santos', email: 'pedro.santos.mistura@multiperfil.com', senha: '123456789', cargo: 'operador_mistura', turno: 'Tarde' },
+                { id: 'u17', nome: 'Lucas Carvalho', email: 'lucas.carvalho.mistura@multiperfil.com', senha: '123456789', cargo: 'operador_mistura', turno: 'Noite' },
+                // ====== OPERADORES DE ENVASE ======
+                { id: 'u18', nome: 'Maria Souza', email: 'maria.souza.envase@multiperfil.com', senha: '123456789', cargo: 'operador_envase', turno: 'Manhã' },
+                { id: 'u19', nome: 'Patrícia Almeida', email: 'patricia.almeida.envase@multiperfil.com', senha: '123456789', cargo: 'operador_envase', turno: 'Tarde' },
+                { id: 'u20', nome: 'Diego Martins', email: 'diego.martins.envase@multiperfil.com', senha: '123456789', cargo: 'operador_envase', turno: 'Noite' },
+                // ====== LEGADOS (compatibilidade com sistemas antigos) ======
+                { id: 'L1', nome: 'Admin (Legado)', email: 'admin@multiperfil.com', senha: '123456789', cargo: 'admin', turno: 'Manhã', legacy: true },
+                { id: 'L2', nome: 'PCP (Legado)', email: 'pcp@multiperfil.com', senha: '123456789', cargo: 'pcp', turno: 'Manhã', legacy: true },
+                { id: 'L3', nome: 'Operador de Mistura (Legado)', email: 'operador.mistura@multiperfil.com', senha: '123456789', cargo: 'operador_mistura', turno: 'Manhã', legacy: true },
+                { id: 'L4', nome: 'Operador de Envase (Legado)', email: 'operador.envase@multiperfil.com', senha: '123456789', cargo: 'operador_envase', turno: 'Manhã', legacy: true },
+                { id: 'L5', nome: 'Laboratório (Legado)', email: 'laboratorio@multiperfil.com', senha: '123456789', cargo: 'laboratorista', turno: 'Manhã', legacy: true },
+                { id: 'L6', nome: 'Expedição (Legado)', email: 'expedicao@multiperfil.com', senha: '123456789', cargo: 'expedicao', turno: 'Manhã', legacy: true },
+                { id: 'L7', nome: 'Estoque (Legado)', email: 'estoque@multiperfil.com', senha: '123456789', cargo: 'estoque', turno: 'Manhã', legacy: true },
+                { id: 'L8', nome: 'Manutenção (Legado)', email: 'manutencao@multiperfil.com', senha: '123456789', cargo: 'manutencao', turno: 'Manhã', legacy: true },
+                // ====== EMAIL DE TESTE ORIGINAL ======
+                { id: 'T1', nome: 'Usuário Teste', email: 'emailteste@gmail.com', senha: '123456789', cargo: 'admin', turno: 'Manhã', legacy: true }
+            ];
+
+            const PAGINAS = {
+                inicio:             { label: 'Início',              icon: 'fa-home' },
+                inicio_operario:    { label: 'Início',              icon: 'fa-home' },
+                ops_pcp:            { label: 'Ordens de Produção',  icon: 'fa-clipboard-list' },
+                central_controle:   { label: 'Central de Controle', icon: 'fa-satellite-dish' },
+                laboratorio:        { label: 'Laboratório',         icon: 'fa-microscope' },
+                qualidade:          { label: 'Qualidade',           icon: 'fa-vial' },
+                mistura_monitor:    { label: 'Monitor de Mistura',  icon: 'fa-chart-area' },
+                misturadores_admin: { label: 'Misturadores',        icon: 'fa-cogs' },
+                operarios:          { label: 'Operários',           icon: 'fa-users' },
+                usuarios:           { label: 'Usuários',            icon: 'fa-user-cog' },
+                produtos:           { label: 'Produtos',            icon: 'fa-boxes' },
+                entradas:           { label: 'Entradas',            icon: 'fa-arrow-down' },
+                saidas:             { label: 'Saídas',              icon: 'fa-arrow-up' },
+                lotes:              { label: 'Lotes',               icon: 'fa-barcode' },
+                perdas:             { label: 'Perdas',              icon: 'fa-trash-alt' },
+                eficiencia:         { label: 'Eficiência',          icon: 'fa-tachometer-alt' },
+                historico:          { label: 'Histórico',           icon: 'fa-history' },
+                chat:               { label: 'Chat',                icon: 'fa-comments' }
+            };
+
+            const CATALOGO = {
+                'Massa para Drywall 20kg': {
+                    codigo: 'MS-001', categoria: 'Massa', preco: 68.90, estoque: 320,
+                    mistura: { tempoMin: 8*60, itens: [
+                        { nome: 'Gesso β', quantidade: '12,0 kg' }, { nome: 'Calcário', quantidade: '3,5 kg' },
+                        { nome: 'Vermiculita', quantidade: '1,2 kg' }, { nome: 'Aditivo Retardador', quantidade: '0,15 kg' },
+                        { nome: 'Aditivo Incorporador', quantidade: '0,08 kg' }, { nome: 'Água', quantidade: '8,5 L' } ],
+                        rpm: 1200 },
+                    envase: { unidade: 'Sacos 20kg', itens: [
+                        { nome: 'Peso alvo por saco', quantidade: '20,0 kg (± 0,2 kg)' }, { nome: 'Temperatura máxima', quantidade: '≤ 45°C' },
+                        { nome: 'Umidade relativa', quantidade: '≤ 60%' }, { nome: 'Vedação do saco', quantidade: 'Selagem dupla' } ] }
+                },
+                'Massa para Junta 18kg': {
+                    codigo: 'MS-002', categoria: 'Massa', preco: 74.50, estoque: 280,
+                    mistura: { tempoMin: 6*60, itens: [
+                        { nome: 'Gesso α', quantidade: '9,0 kg' }, { nome: 'Carbonato de Cálcio', quantidade: '5,0 kg' },
+                        { nome: 'Amido Modificado', quantidade: '0,30 kg' }, { nome: 'Aditivo Retardador', quantidade: '0,12 kg' },
+                        { nome: 'Água', quantidade: '7,0 L' } ], rpm: 1000 },
+                    envase: { unidade: 'Sacos 18kg', itens: [
+                        { nome: 'Peso alvo por saco', quantidade: '18,0 kg (± 0,2 kg)' }, { nome: 'Temperatura máxima', quantidade: '≤ 40°C' },
+                        { nome: 'Umidade relativa', quantidade: '≤ 60%' }, { nome: 'Vedação do saco', quantidade: 'Selagem simples' } ] }
+                },
+                'Rejunte Flexível 15kg': {
+                    codigo: 'RJ-001', categoria: 'Rejunte', preco: 52.00, estoque: 150,
+                    mistura: { tempoMin: 10*60, itens: [
+                        { nome: 'Cimento Branco', quantidade: '6,0 kg' }, { nome: 'Areia Quartzo Fina', quantidade: '7,0 kg' },
+                        { nome: 'Resina Polimérica (pó)', quantidade: '0,90 kg' }, { nome: 'Pigmento', quantidade: '0,10 kg' },
+                        { nome: 'Aditivo Hidrofugante', quantidade: '0,05 kg' } ], rpm: 900 },
+                    envase: { unidade: 'Sacos 15kg', itens: [
+                        { nome: 'Peso alvo por saco', quantidade: '15,0 kg (± 0,15 kg)' }, { nome: 'Temperatura máxima', quantidade: '≤ 40°C' },
+                        { nome: 'Umidade relativa', quantidade: '≤ 55%' }, { nome: 'Vedação do saco', quantidade: 'Selagem dupla + barreira' } ] }
+                },
+                'Gesso Projetável 25kg': {
+                    codigo: 'GS-001', categoria: 'Gesso', preco: 39.90, estoque: 400,
+                    mistura: { tempoMin: 12*60, itens: [
+                        { nome: 'Gesso β', quantidade: '20,0 kg' }, { nome: 'Perlita Expandida', quantidade: '3,0 kg' },
+                        { nome: 'Aditivo Retardador', quantidade: '0,25 kg' }, { nome: 'Éter de Celulose', quantidade: '0,10 kg' },
+                        { nome: 'Água', quantidade: '13,0 L' } ], rpm: 800 },
+                    envase: { unidade: 'Sacos 25kg', itens: [
+                        { nome: 'Peso alvo por saco', quantidade: '25,0 kg (± 0,25 kg)' }, { nome: 'Temperatura máxima', quantidade: '≤ 45°C' },
+                        { nome: 'Umidade relativa', quantidade: '≤ 60%' }, { nome: 'Vedação do saco', quantidade: 'Selagem dupla' } ] }
+                },
+                'Cola para Placa Cimentícia 20kg': {
+                    codigo: 'CL-001', categoria: 'Cola', preco: 61.30, estoque: 210,
+                    mistura: { tempoMin: 15*60, itens: [
+                        { nome: 'Cimento CP V', quantidade: '7,0 kg' }, { nome: 'Areia Média Seca', quantidade: '11,0 kg' },
+                        { nome: 'Resina Polimérica (pó)', quantidade: '1,40 kg' }, { nome: 'Éter de Celulose', quantidade: '0,12 kg' },
+                        { nome: 'Fibra de Polipropileno', quantidade: '0,08 kg' } ], rpm: 700 },
+                    envase: { unidade: 'Sacos 20kg', itens: [
+                        { nome: 'Peso alvo por saco', quantidade: '20,0 kg (± 0,2 kg)' }, { nome: 'Temperatura máxima', quantidade: '≤ 40°C' },
+                        { nome: 'Umidade relativa', quantidade: '≤ 50%' }, { nome: 'Vedação do saco', quantidade: 'Selagem dupla + barreira' } ] }
+                },
+                'Massa Corrida Acabamento 25kg': {
+                    codigo: 'MC-001', categoria: 'Massa', preco: 58.70, estoque: 180,
+                    mistura: { tempoMin: 9*60, itens: [
+                        { nome: 'Carbonato de Cálcio', quantidade: '14,0 kg' }, { nome: 'Emulsão PVA', quantidade: '4,5 kg' },
+                        { nome: 'Espessante Celulósico', quantidade: '0,15 kg' }, { nome: 'Dispersante', quantidade: '0,10 kg' },
+                        { nome: 'Biocida', quantidade: '0,03 kg' }, { nome: 'Água', quantidade: '6,0 L' } ], rpm: 1100 },
+                    envase: { unidade: 'Baldes 25kg', itens: [
+                        { nome: 'Peso alvo por balde', quantidade: '25,0 kg (± 0,25 kg)' }, { nome: 'Temperatura máxima', quantidade: '≤ 35°C' },
+                        { nome: 'Umidade relativa', quantidade: '≤ 70%' }, { nome: 'Vedação', quantidade: 'Tampa com lacre' } ] }
+                },
+                'Selador Acrílico 18L': {
+                    codigo: 'SL-001', categoria: 'Selador', preco: 96.40, estoque: 95,
+                    mistura: { tempoMin: 5*60, itens: [
+                        { nome: 'Emulsão Acrílica', quantidade: '6,5 kg' }, { nome: 'Carga Mineral Fina', quantidade: '3,0 kg' },
+                        { nome: 'Coalescente', quantidade: '0,25 L' }, { nome: 'Antiespumante', quantidade: '0,04 L' },
+                        { nome: 'Água', quantidade: '8,5 L' } ], rpm: 1400 },
+                    envase: { unidade: 'Baldes 18L', itens: [
+                        { nome: 'Volume alvo por balde', quantidade: '18,0 L (± 0,1 L)' }, { nome: 'Temperatura máxima', quantidade: '≤ 30°C' },
+                        { nome: 'Viscosidade (Ford 4)', quantidade: '25 – 35 s' }, { nome: 'Vedação', quantidade: 'Tampa com lacre' } ] }
+                }
+            };
+            const PRODUTO_PADRAO = 'Massa para Drywall 20kg';
+
+            const MISTURADORES_DEFAULT = [
+                { id: 'm1', nome: 'Misturador 01', status: 'funcionando', obs: 'Produzindo normalmente', operador: null, operadorNome: 'João Silva', opAtual: null, inicioUso: null },
+                { id: 'm2', nome: 'Misturador 02', status: 'standby', obs: 'Aguardando troca de lote', operador: null, operadorNome: null, opAtual: null, inicioUso: null },
+                { id: 'm3', nome: 'Misturador 03', status: 'defeito', obs: 'Motor com ruído - aguardando manutenção', operador: null, operadorNome: null, opAtual: null, inicioUso: null }
+            ];
+
+            const KEYS = {
+                CHAT: 'multiperfil_chat_v9', CHAT_IA: 'multiperfil_chat_ia_v9',
+                OPS: 'multiperfil_ops_v9', MISTURADORES: 'multiperfil_misturadores_v9',
+                PRODUTOS: 'multiperfil_produtos_v9', ENTRADAS: 'multiperfil_entradas_v9',
+                SAIDAS: 'multiperfil_saidas_v9', LOTES: 'multiperfil_lotes_v9',
+                PERDAS: 'multiperfil_perdas_v9', USUARIOS: 'multiperfil_usuarios_v9',
+                LOGS: 'multiperfil_logs_v9'
+            };
+
+            const FLUXO_OP = [
+                { status: 'Aguardando Mistura',    label: 'Aguardando',  icon: 'fa-clock',         setor: 'mistura' },
+                { status: 'Em Mistura',            label: 'Mistura',     icon: 'fa-flask',         setor: 'mistura' },
+                { status: 'Em Qualidade',          label: 'Qualidade',   icon: 'fa-vial',          setor: 'qualidade' },
+                { status: 'Em Envase',             label: 'Envase',      icon: 'fa-fill-drip',     setor: 'envase' },
+                { status: 'Em Laboratório',        label: 'Laboratório', icon: 'fa-microscope',    setor: 'laboratorio' },
+                { status: 'Encerrada',             label: 'Encerrada',   icon: 'fa-check-circle',  setor: 'encerrada' }
+            ];
+
+            // Mapeamento de status legados para novos (compatibilidade)
+            const STATUS_LEGACY_MAP = {
+                'Em Acabamento': 'Em Laboratório',
+                'Em Embalagem': 'Em Laboratório',
+                'Aguardando Qualidade': 'Em Qualidade',
+                'Aguardando Envase': 'Em Envase',
+                'Aguardando Laboratório': 'Em Laboratório'
+            };
+
+            function normalizarStatusOP(op) {
+                if (STATUS_LEGACY_MAP[op.status]) {
+                    op.status = STATUS_LEGACY_MAP[op.status];
+                }
+                return op;
+            }
+
+            let currentUser = null;
+            let currentPage = 'inicio';
+            let chatOpen = false;
+            let chatIAModo = false;
+            let setorSelecionado = 'todos';
+            let relogioIntervals = {};
+
+            const $ = (s) => document.querySelector(s);
+            const $$ = (s) => document.querySelectorAll(s);
+
+            // ==========================================================
+            // HELPERS
+            // ==========================================================
+            function gerarId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+            function getStorage(key, fallback = []) {
+                try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : fallback; }
+                catch (e) { return fallback; }
+            }
+            function setStorage(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+            function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+            function formatDateTime(d) {
+                if (!d) return '-';
+                return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+            function formatCurrency(v) {
+                return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+            }
+            function fmtMinSeg(seg) {
+                seg = Math.max(0, Math.ceil(seg));
+                return String(Math.floor(seg / 60)).padStart(2, '0') + ':' + String(seg % 60).padStart(2, '0');
+            }
+            function getTempoMinimoSeg(op, setor) {
+                if (setor !== 'mistura') return 0;
+                const c = CATALOGO[op.produto];
+                return (c && c.mistura && c.mistura.tempoMin) || 0;
+            }
+            function getSegDecorridos(op) {
+                if (!op || !op.inicioTrabalho) return 0;
+                return Math.floor((Date.now() - new Date(op.inicioTrabalho.timestamp).getTime()) / 1000);
+            }
+            function statusBadgeClass(status) {
+                if (status === 'Encerrada') return 'badge-success';
+                if (status.includes('Aguardando')) return 'badge-warning';
+                if (status.includes('Em ')) return 'badge-info';
+                return 'badge';
+            }
+            function calcularTempoDecorrido(inicioISO) {
+                if (!inicioISO) return '00:00:00';
+                const diff = Date.now() - new Date(inicioISO).getTime();
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            }
+
+            // ==========================================================
+            // 📝 LOG
+            // ==========================================================
+            function registrarLog(acao, detalhes, tipo = 'info') {
+                const logs = getStorage(KEYS.LOGS);
+                logs.push({
+                    id: gerarId(),
+                    usuario: currentUser ? currentUser.nome : 'Sistema',
+                    email: currentUser ? currentUser.email : 'sistema',
+                    cargo: currentUser ? currentUser.cargoLabel : 'Sistema',
+                    acao, detalhes: detalhes || '', tipo,
+                    timestamp: new Date().toISOString()
+                });
+                if (logs.length > 5000) logs.splice(0, logs.length - 5000);
+                setStorage(KEYS.LOGS, logs);
+            }
+
+            // ==========================================================
+            // USUÁRIOS
+            // ==========================================================
+            function getUsuarios() {
+                let us = getStorage(KEYS.USUARIOS);
+                if (us.length === 0) {
+                    setStorage(KEYS.USUARIOS, USUARIOS_DEFAULT);
+                    us = USUARIOS_DEFAULT;
+                } else {
+                    // Garantir que usuários legados sempre existam
+                    USUARIOS_DEFAULT.forEach(def => {
+                        if (!us.some(u => u.email.toLowerCase() === def.email.toLowerCase())) {
+                            us.push(def);
+                        }
+                    });
+                }
+                return us;
+            }
+            function getUsuarioPorEmail(email) {
+                return getUsuarios().find(u => u.email.toLowerCase() === email.toLowerCase());
+            }
+            function getCargoInfo(cargoKey) {
+                return CARGOS[cargoKey] || CARGOS.admin;
+            }
+
+            // ==========================================================
+            // POPULAR LOGIN
+            // ==========================================================
+            function popularLogin() {
+                const select = $('#loginRole');
+                const demo = $('#demoEmails');
+                
+                select.innerHTML = '<option value="">Selecione um perfil...</option>';
+                Object.entries(CARGOS).forEach(([key, c]) => {
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = c.label;
+                    select.appendChild(opt);
+                });
+
+                const usuarios = getUsuarios();
+                let html = '<h4><i class="fas fa-info-circle"></i> Acessos (senha: 123456789)</h4>';
+                
+                // Novos usuários
+                html += `<div style="margin-top:10px; margin-bottom:6px; font-size:0.72rem; font-weight:700; color:var(--verde); text-transform:uppercase; letter-spacing:0.5px;">
+                    <i class="fas fa-star"></i> Novos Usuários
+                </div>`;
+                usuarios.filter(u => !u.legacy).forEach(u => {
+                    const c = getCargoInfo(u.cargo);
+                    html += `<div class="demo-email-item" onclick="selecionarEmail('${u.email}')">
+                        <div><div class="role"><i class="fas ${c.icon}"></i> ${u.nome}</div><div class="email">${u.email}</div></div>
+                        <i class="fas fa-arrow-right"></i>
+                    </div>`;
+                });
+
+                // Legados
+                html += `<div style="margin-top:14px; margin-bottom:6px; font-size:0.72rem; font-weight:700; color:var(--amarelo); text-transform:uppercase; letter-spacing:0.5px;">
+                    <i class="fas fa-history"></i> Compatibilidade (Versões Anteriores)
+                </div>`;
+                usuarios.filter(u => u.legacy).forEach(u => {
+                    const c = getCargoInfo(u.cargo);
+                    html += `<div class="demo-email-item" onclick="selecionarEmail('${u.email}')">
+                        <div><div class="role"><i class="fas ${c.icon}"></i> ${u.nome}</div><div class="email">${u.email}</div></div>
+                        <i class="fas fa-arrow-right"></i>
+                    </div>`;
+                });
+
+                demo.innerHTML = html;
+            }
+
+            window.selecionarEmail = function(email) {
+                const u = getUsuarioPorEmail(email);
+                if (u) $('#loginRole').value = u.cargo;
+                $('#loginEmail').value = email;
+                $('#loginPassword').value = '123456789';
+            };
+
+            window.preencherEmail = function() {
+                const role = $('#loginRole').value;
+                if (!role) { $('#loginEmail').value = ''; return; }
+                const usuarios = getUsuarios();
+                const u = usuarios.find(x => x.cargo === role && !x.legacy) || usuarios.find(x => x.cargo === role);
+                if (u) {
+                    $('#loginEmail').value = u.email;
+                    $('#loginPassword').value = '123456789';
+                }
+            };
+
+            // ==========================================================
+            // LOGIN / LOGOUT
+            // ==========================================================
+            function performLogin() {
+                const email = $('#loginEmail').value.trim().toLowerCase();
+                const senha = $('#loginPassword').value;
+
+                const usuarios = getUsuarios();
+                const u = usuarios.find(x => x.email.toLowerCase() === email);
+
+                if (!u) { $('#loginError').textContent = 'E-mail não cadastrado.'; return; }
+                if (u.senha !== senha) { $('#loginError').textContent = 'Senha incorreta.'; return; }
+
+                const cargoInfo = getCargoInfo(u.cargo);
+                currentUser = {
+                    id: u.id, nome: u.nome, email: u.email, cargo: u.cargo,
+                    cargoLabel: cargoInfo.label, cargoIcon: cargoInfo.icon,
+                    tipo: cargoInfo.tipo, setor: cargoInfo.setor, turno: u.turno,
+                    legacy: u.legacy || false,
+                    podeCadastrarProduto: cargoInfo.podeCadastrarProduto,
+                    podeCadastrarUsuario: cargoInfo.podeCadastrarUsuario,
+                    podeExcluir: cargoInfo.podeExcluir,
+                    podeRetroceder: cargoInfo.podeRetroceder,
+                    podeCentralControle: cargoInfo.podeCentralControle,
+                    podeRegistrarPerda: cargoInfo.podeRegistrarPerda,
+                    paginas: cargoInfo.paginas
+                };
+                currentPage = cargoInfo.tipo === 'operario' ? 'inicio_operario' : 'inicio';
+
+                $('#loginOverlay').classList.add('hidden');
+                $('#appContainer').classList.remove('hidden');
+                $('#chatToggle').classList.remove('hidden');
+                $('#userDisplayEmail').textContent = u.email;
+                $('#roleLabel').textContent = cargoInfo.label + (u.legacy ? ' 🔄' : '');
+
+                seedData();
+                renderNavTabs();
+                renderPage(currentPage);
+                renderChatComIA();
+                updateChatBadge();
+
+                registrarLog('Login', `${u.nome} (${cargoInfo.label})${u.legacy ? ' [LEGADO]' : ''} acessou o sistema`, 'info');
+                verificarEstoqueBaixo();
+            }
+
+            function performLogout() {
+                if (currentUser) registrarLog('Logout', `${currentUser.nome} saiu do sistema`, 'info');
+                Object.values(relogioIntervals).forEach(i => clearInterval(i));
+                relogioIntervals = {};
+                currentUser = null;
+                currentPage = 'inicio';
+                $('#appContainer').classList.add('hidden');
+                $('#loginOverlay').classList.remove('hidden');
+                $('#chatToggle').classList.add('hidden');
+                $('#chatPanel').classList.remove('open');
+                chatOpen = false;
+                $('#loginPassword').value = '';
+                $('#loginError').textContent = '';
+                $('#loginEmail').value = '';
+                $('#loginRole').value = '';
+            }
+
+            // ==========================================================
+            // NAV
+            // ==========================================================
+            function renderNavTabs() {
+                if (!currentUser) return;
+                const nav = $('#navTabs');
+                nav.innerHTML = '';
+                currentUser.paginas.forEach(paginaKey => {
+                    const pagina = PAGINAS[paginaKey];
+                    if (!pagina) return;
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-tab' + (paginaKey === currentPage ? ' active' : '');
+                    btn.dataset.page = paginaKey;
+                    btn.innerHTML = `<i class="fas ${pagina.icon}"></i> ${pagina.label}`;
+                    btn.addEventListener('click', () => switchPage(paginaKey));
+                    nav.appendChild(btn);
+                });
+            }
+
+            function switchPage(paginaKey) {
+                if (!currentUser) return;
+                if (!currentUser.paginas.includes(paginaKey)) return;
+                currentPage = paginaKey;
+                $$('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.page === paginaKey));
+                renderPage(paginaKey);
+            }
+
+            // ==========================================================
+            // RENDER DE PÁGINAS
+            // ==========================================================
+            function renderPage(paginaKey) {
+                if (!currentUser) return;
+                if (!currentUser.paginas.includes(paginaKey)) return;
+
+                let html = '';
+                switch (paginaKey) {
+                    case 'inicio':             html = pageInicioGestor(); break;
+                    case 'inicio_operario':    html = pageInicioOperario(); break;
+                    case 'ops_pcp':            html = pageOPsPCP(); break;
+                    case 'central_controle':   html = pageCentralControle(); break;
+                    case 'laboratorio':        html = pageLaboratorio(); break;
+                    case 'qualidade':          html = pageQualidade(); break;
+                    case 'mistura_monitor':    html = pageMisturaMonitor(); break;
+                    case 'misturadores_admin': html = pageMisturadoresAdmin(); break;
+                    case 'operarios':          html = pageOperarios(); break;
+                    case 'usuarios':           html = pageUsuarios(); break;
+                    case 'produtos':           html = pageProdutos(); break;
+                    case 'entradas':           html = pageEntradas(); break;
+                    case 'saidas':             html = pageSaidas(); break;
+                    case 'lotes':              html = pageLotes(); break;
+                    case 'perdas':             html = pagePerdas(); break;
+                    case 'eficiencia':         html = pageEficiencia(); break;
+                    case 'historico':          html = pageHistorico(); break;
+                    case 'chat':               html = pageChatEmbed(); break;
+                    default: html = `<div class="card"><div class="empty-state"><i class="fas fa-tools"></i><p>Página em desenvolvimento</p></div></div>`;
+                }
+                $('#contentArea').innerHTML = html;
+                attachPageEvents(paginaKey);
+            }
+
+            // ==========================================================
+            // CENTRAL DE CONTROLE
+            // ==========================================================
+            function pageCentralControle() {
+                const misturadores = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const statusLabel = { funcionando: 'Em Funcionamento', standby: 'Em Standby', defeito: 'Com Defeito', desligado: 'Desligado' };
+                const statusIcon = { funcionando: 'fa-check-circle', standby: 'fa-pause-circle', defeito: 'fa-exclamation-triangle', desligado: 'fa-power-off' };
+
+                const cards = misturadores.map(m => {
+                    const tempoUso = m.inicioUso ? calcularTempoDecorrido(m.inicioUso) : null;
+                    const podeDesligar = currentUser.podeCentralControle && m.operador;
+                    return `
+                        <div class="misturador-card ${m.status}">
+                            <div class="misturador-icon"><i class="fas ${statusIcon[m.status]}"></i></div>
+                            <div class="misturador-nome">${escapeHtml(m.nome)}</div>
+                            <div class="misturador-status">${statusLabel[m.status]}</div>
+                            ${m.operadorNome ? `
+                                <div class="text-small mt-1" style="color: var(--verde); font-weight: 700;"><i class="fas fa-user-circle"></i> ${escapeHtml(m.operadorNome)}</div>
+                                ${m.opAtual ? `<div class="text-small">OP: ${escapeHtml(m.opAtual)}</div>` : ''}
+                                ${tempoUso ? `<div class="text-small">Em uso há: <strong>${tempoUso}</strong></div>` : ''}
+                            ` : '<div class="text-small mt-1" style="color:#999;">Sem operador</div>'}
+                            <div class="misturador-obs">${escapeHtml(m.obs || '')}</div>
+                            ${podeDesligar ? `<button class="btn btn-danger btn-sm mt-2" onclick="desligarMaquina('${m.id}')"><i class="fas fa-power-off"></i> Desligar</button>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                const funcionando = misturadores.filter(m => m.status === 'funcionando').length;
+                const standby = misturadores.filter(m => m.status === 'standby').length;
+                const defeito = misturadores.filter(m => m.status === 'defeito').length;
+                const desligado = misturadores.filter(m => m.status === 'desligado').length;
+
+                return `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-satellite-dish"></i> Central de Controle</div></div>
+                        <div class="kpi-grid">
+                            <div class="kpi-item" style="border-bottom-color: var(--verde);"><div class="kpi-value" style="color: var(--verde);">${funcionando}</div><div class="kpi-label">Funcionando</div></div>
+                            <div class="kpi-item" style="border-bottom-color: var(--amarelo);"><div class="kpi-value" style="color: var(--amarelo);">${standby}</div><div class="kpi-label">Standby</div></div>
+                            <div class="kpi-item" style="border-bottom-color: var(--vermelho);"><div class="kpi-value" style="color: var(--vermelho);">${defeito}</div><div class="kpi-label">Com Defeito</div></div>
+                            <div class="kpi-item" style="border-bottom-color: #666;"><div class="kpi-value" style="color: #666;">${desligado}</div><div class="kpi-label">Desligadas</div></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-industry"></i> Status em Tempo Real</div></div>
+                        <div class="misturadores-grid">${cards}</div>
+                    </div>
+                `;
+            }
+
+            window.desligarMaquina = function(id) {
+                if (!currentUser.podeCentralControle) { alert('Acesso restrito.'); return; }
+                const misturadores = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const m = misturadores.find(x => x.id === id);
+                if (!m) return;
+                if (!confirm(`Desligar ${m.nome}?`)) return;
+                m.status = 'desligado'; m.operador = null; m.operadorNome = null;
+                m.opAtual = null; m.inicioUso = null;
+                m.obs = `Desligado por ${currentUser.nome}`;
+                setStorage(KEYS.MISTURADORES, misturadores);
+                registrarLog('Máquina Desligada', `${m.nome}`, 'amarelo');
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // QUALIDADE
+            // ==========================================================
+            function pageQualidade() {
+                if (currentUser.cargo !== 'tecnico_quimica' && currentUser.cargo !== 'admin') {
+                    return `<div class="card"><div class="empty-state"><i class="fas fa-lock"></i><p>Acesso restrito</p></div></div>`;
+                }
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const aguardando = ops.filter(o => o.status === 'Em Qualidade');
+                const emMistura = ops.filter(o => o.status === 'Em Mistura');
+
+                let listaAguardando = aguardando.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-vial"></i><p>Nenhuma OP aguardando qualidade</p></div>`
+                    : aguardando.map(o => `
+                        <div class="op-card">
+                            <div class="op-card-header">
+                                <div>
+                                    <div class="op-card-numero">${o.numero}</div>
+                                    <div class="op-card-produto"><strong>${escapeHtml(o.produto)}</strong></div>
+                                    <div class="text-small mt-1">Qtd: ${o.quantidade} | Lote: ${escapeHtml(o.lote)}</div>
+                                </div>
+                                <div class="op-card-badge" style="background: var(--roxo);">Aguardando Qualidade</div>
+                            </div>
+                            <button class="btn btn-roxo btn-xl" onclick="abrirQualidade('${o.id}')"><i class="fas fa-vial"></i> Analisar Qualidade</button>
+                        </div>
+                    `).join('');
+
+                let listaMonitor = emMistura.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-check-circle" style="color: var(--verde);"></i><p>Nenhuma mistura em andamento</p></div>`
+                    : emMistura.map(o => {
+                        const seg = getSegDecorridos(o);
+                        const tMin = getTempoMinimoSeg(o, 'mistura');
+                        const pct = tMin ? Math.min(100, (seg / tMin) * 100) : 100;
+                        return `<div class="linha-metrica">
+                            <div style="min-width:200px;">
+                                <div style="font-weight:600;">${o.numero} - ${escapeHtml(o.produto)}</div>
+                                <div class="text-small">Operador: ${escapeHtml(o.inicioTrabalho?.operador || '-')}</div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                                <div class="barra-progresso"><div class="barra-preenchimento" style="width:${pct}%; background: var(--azul-escuro);"></div></div>
+                                <span style="font-weight:700; color: var(--azul-escuro); min-width:90px; text-align:right;">${calcularTempoDecorrido(o.inicioTrabalho?.timestamp)}</span>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                return `
+                    <div class="alert alert-roxo"><i class="fas fa-vial"></i><div><strong>Análise de Qualidade</strong><br><span class="text-small">Verifique antes de enviar para o envase.</span></div></div>
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-vial"></i> OPs Aguardando Qualidade</div></div>
+                        ${listaAguardando}
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-chart-area"></i> Monitor de Mistura</div></div>
+                        ${listaMonitor}
+                    </div>
+                `;
+            }
+
+            window.abrirQualidade = function(opId) {
+                if (currentUser.cargo !== 'tecnico_quimica' && currentUser.cargo !== 'admin') return;
+                const op = getStorage(KEYS.OPS).find(o => o.id === opId);
+                if (!op) return;
+                const formula = CATALOGO[op.produto] || CATALOGO[PRODUTO_PADRAO];
+                const formulaHtml = formula.mistura.itens.map(i => `<div class="formula-item"><span class="name">${i.nome}</span><span class="value">${i.quantidade}</span></div>`).join('');
+
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-vial"></i> Qualidade - ${op.numero}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <div class="info-grid">
+                        <div class="info-block"><div class="info-block-label">Produto</div><div class="info-block-value">${escapeHtml(op.produto)}</div></div>
+                        <div class="info-block"><div class="info-block-label">Qtd</div><div class="info-block-value">${op.quantidade}</div></div>
+                        <div class="info-block"><div class="info-block-label">Lote</div><div class="info-block-value">${escapeHtml(op.lote)}</div></div>
+                    </div>
+                    ${op.registros?.mistura ? `
+                        <h4 style="color: var(--azul-escuro); margin: 1rem 0 0.5rem;"><i class="fas fa-flask"></i> Dados da Mistura</h4>
+                        <div class="info-grid">
+                            <div class="info-block"><div class="info-block-label">Densidade Inicial</div><div class="info-block-value">${op.registros.mistura.dados.densidadeInicial}</div></div>
+                            <div class="info-block"><div class="info-block-label">Densidade Final</div><div class="info-block-value">${op.registros.mistura.dados.densidadeFinal}</div></div>
+                            <div class="info-block"><div class="info-block-label">pH</div><div class="info-block-value">${op.registros.mistura.dados.ph}</div></div>
+                        </div>
+                    ` : ''}
+                    <div class="formula-box">
+                        <div class="formula-title"><i class="fas fa-prescription-bottle"></i> Fórmula Química</div>
+                        ${formulaHtml}
+                    </div>
+                    <form onsubmit="salvarQualidade(event, '${op.id}')">
+                        <h4 style="color: var(--roxo); margin: 1rem 0 0.5rem;"><i class="fas fa-clipboard-check"></i> Teste de Qualidade</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Viscosidade *</label>
+                                <select name="viscosidade" required><option value="">Selecione</option><option>OK</option><option>Fora do padrão</option></select>
+                            </div>
+                            <div class="form-group"><label>pH Verificado *</label><input type="number" name="phVerificado" step="0.1" required></div>
+                            <div class="form-group"><label>Densidade Verificada *</label><input type="number" name="densidadeVerificada" step="0.01" required></div>
+                            <div class="form-group"><label>Aspecto Visual *</label>
+                                <select name="aspecto" required><option value="">Selecione</option><option>Conforme</option><option>Não conforme</option></select>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Observações Técnicas</label><textarea name="observacoes" rows="2"></textarea></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Resultado *</label>
+                                <select name="resultado" required>
+                                    <option value="">Selecione</option>
+                                    <option>Aprovado - Enviar para Envase</option>
+                                    <option>Reprovado - Retroceder para Mistura</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-roxo btn-xl"><i class="fas fa-check-circle"></i> Registrar Análise</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `, true);
+            };
+
+            window.salvarQualidade = function(e, opId) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ops = getStorage(KEYS.OPS);
+                const op = ops.find(o => o.id === opId);
+                if (!op) return;
+
+                op.qualidade = { analisadoPor: currentUser.nome, cargo: currentUser.cargoLabel, timestamp: new Date().toISOString(), dados: d, resultado: d.resultado };
+                op.historico = op.historico || [];
+
+                if (d.resultado.startsWith('Aprovado')) {
+                    op.status = 'Em Envase';
+                    op.historico.push({ setor: currentUser.nome, acao: 'Qualidade Aprovada', timestamp: new Date().toISOString() });
+                    registrarLog('Qualidade Aprovada', `OP ${op.numero}`, 'verde');
+                } else {
+                    op.status = 'Aguardando Mistura';
+                    op.historico.push({ setor: currentUser.nome, acao: 'Qualidade Reprovada - RETROCEDIDA para Mistura', timestamp: new Date().toISOString() });
+                    registrarLog('Qualidade Reprovada', `OP ${op.numero} RETROCEDIDA`, 'vermelho');
+                }
+
+                setStorage(KEYS.OPS, ops);
+                closeModal();
+                renderPage(currentPage);
+                alert(d.resultado.startsWith('Aprovado') ? '✅ Aprovada!' : '⚠️ Reprovada e retrocedida!');
+            };
+
+            // ==========================================================
+            // MONITOR DE MISTURA
+            // ==========================================================
+            function pageMisturaMonitor() {
+                if (currentUser.cargo !== 'tecnico_quimica' && currentUser.cargo !== 'admin') {
+                    return `<div class="card"><div class="empty-state"><i class="fas fa-lock"></i><p>Acesso restrito</p></div></div>`;
+                }
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const emMistura = ops.filter(o => o.status === 'Em Mistura');
+                let lista = emMistura.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-flask"></i><p>Nenhuma mistura em andamento</p></div>`
+                    : emMistura.map(o => {
+                        const seg = getSegDecorridos(o);
+                        const tMin = getTempoMinimoSeg(o, 'mistura');
+                        const pct = tMin ? Math.min(100, (seg / tMin) * 100) : 100;
+                        const prod = CATALOGO[o.produto] || CATALOGO[PRODUTO_PADRAO];
+                        const massaTotal = prod.mistura.itens.reduce((acc, i) => {
+                            const m = i.quantidade.match(/([\d,]+)/);
+                            if (m) {
+                                const v = parseFloat(m[1].replace(',', '.'));
+                                return acc + (i.quantidade.includes('kg') ? v : 0);
+                            }
+                            return acc;
+                        }, 0);
+                        return `
+                            <div class="card" style="background: var(--fundo-claro); box-shadow: none; margin-bottom: 1rem;">
+                                <div class="flex-between"><h4 style="color: var(--azul-escuro);">${o.numero} - ${escapeHtml(o.produto)}</h4><div class="badge badge-info">Em Mistura</div></div>
+                                <div class="tempo-decorrido mt-2"><div class="label"><i class="fas fa-stopwatch"></i> Tempo</div><div class="valor">${calcularTempoDecorrido(o.inicioTrabalho?.timestamp)}</div></div>
+                                <div class="linha-metrica">
+                                    <div style="min-width:180px;">Progresso</div>
+                                    <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                                        <div class="barra-progresso"><div class="barra-preenchimento" style="width:${pct}%; background: var(--azul-escuro);"></div></div>
+                                        <span style="font-weight:700;">${pct.toFixed(0)}%</span>
+                                    </div>
+                                </div>
+                                <div class="info-grid mt-2">
+                                    <div class="info-block"><div class="info-block-label">Massa Total</div><div class="info-block-value">${(massaTotal * o.quantidade).toFixed(1)} kg</div></div>
+                                    <div class="info-block"><div class="info-block-label">Rotação</div><div class="info-block-value">${prod.mistura.rpm} rpm</div></div>
+                                    <div class="info-block"><div class="info-block-label">Operador</div><div class="info-block-value">${escapeHtml(o.inicioTrabalho?.operador || '-')}</div></div>
+                                </div>
+                            </div>`;
+                    }).join('');
+
+                return `
+                    <div class="alert alert-roxo"><i class="fas fa-chart-area"></i><div><strong>Monitoramento de Mistura</strong></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-chart-area"></i> Misturas em Andamento</div></div>${lista}</div>
+                `;
+            }
+
+            // ==========================================================
+            // INÍCIO GESTOR
+            // ==========================================================
+            function pageInicioGestor() {
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const opsAndamento = ops.filter(o => o.status !== 'Encerrada').length;
+                const ef = calcularEficiencia();
+                const legacyBadge = currentUser.legacy ? '<span class="badge badge-legacy" style="margin-left:8px;"><i class="fas fa-history"></i> Conta Legada</span>' : '';
+
+                return `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-home"></i> Bem-vindo, ${escapeHtml(currentUser.nome)} ${legacyBadge}</div>
+                            <div class="badge badge-info">${currentUser.cargoLabel} • ${currentUser.turno}</div>
+                        </div>
+                        <div class="clock-display" id="relogioGestor">
+                            <div class="clock-label"><i class="fas fa-clock"></i> Hora atual</div>
+                            <div class="clock-time">--:--:--</div>
+                            <div class="clock-date">Carregando...</div>
+                        </div>
+                        <div class="kpi-grid">
+                            <div class="kpi-item"><div class="kpi-value">${opsAndamento}</div><div class="kpi-label">OPs em Andamento</div></div>
+                            <div class="kpi-item" style="border-bottom-color:var(--azul-escuro);"><div class="kpi-value" style="color:var(--azul-escuro);">${ef.rendimento}%</div><div class="kpi-label">Rendimento</div></div>
+                            <div class="kpi-item" style="border-bottom-color:${ef.perdaMedia > 3 ? 'var(--vermelho)' : 'var(--cinza-aco)'};"><div class="kpi-value" style="color:${ef.perdaMedia > 3 ? 'var(--vermelho)' : 'var(--cinza-aco)'};">${ef.perdaMedia}%</div><div class="kpi-label">Perda Média</div></div>
+                            <div class="kpi-item" style="border-bottom-color:var(--verde);"><div class="kpi-value" style="color:var(--verde);">${ef.encerradas}</div><div class="kpi-label">Encerradas</div></div>
+                        </div>
+                        ${currentUser.legacy ? `
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-history"></i>
+                                <div>
+                                    <strong>Você está usando uma conta de compatibilidade</strong><br>
+                                    <span class="text-small">Esta conta foi mantida para compatibilidade com versões anteriores. Todas as funcionalidades estão ativas.</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // ==========================================================
+            // INÍCIO OPERÁRIO
+            // ==========================================================
+            function pageInicioOperario() {
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const setor = currentUser.setor;
+                const config = getConfigSetor(setor);
+                const misturadores = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const minhaMaquina = misturadores.find(m => m.operador === currentUser.email);
+
+                let maquinaHtml = '';
+                if (minhaMaquina) {
+                    const tempo = minhaMaquina.inicioUso ? calcularTempoDecorrido(minhaMaquina.inicioUso) : '00:00:00';
+                    maquinaHtml = `<div class="card" style="background: var(--verde-claro); border-color: var(--verde);">
+                        <div class="flex-between">
+                            <div>
+                                <div style="font-weight:700; color: var(--verde);"><i class="fas fa-check-circle"></i> Você está operando</div>
+                                <div style="font-size:1.3rem; font-weight:800; color: var(--azul-escuro);">${escapeHtml(minhaMaquina.nome)}</div>
+                                <div class="text-small">Tempo em uso: <strong>${tempo}</strong></div>
+                            </div>
+                            <button class="btn btn-danger" onclick="deslogarMaquina('${minhaMaquina.id}')"><i class="fas fa-power-off"></i> Encerrar Uso</button>
+                        </div>
+                    </div>`;
+                } else {
+                    const disp = misturadores.filter(m => !m.operador && m.status !== 'defeito' && m.status !== 'desligado');
+                    maquinaHtml = `<div class="card" style="background: var(--amarelo-claro); border-color: var(--amarelo);">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-exclamation-triangle"></i> Você não está em nenhuma máquina</div></div>
+                        ${disp.length === 0 ? '<div class="alert alert-warning"><i class="fas fa-info-circle"></i> Nenhuma máquina disponível</div>' : `
+                            <div class="form-group">
+                                <label>Selecionar Máquina *</label>
+                                <select id="selectMaquina"><option value="">Escolha...</option>${disp.map(m => `<option value="${m.id}">${escapeHtml(m.nome)} - ${m.status}</option>`).join('')}</select>
+                            </div>
+                            <button class="btn btn-success btn-lg mt-2" onclick="logarMaquina()"><i class="fas fa-play"></i> Iniciar Operação</button>
+                        `}
+                    </div>`;
+                }
+
+                let opsAguardando = [], opsEmAndamento = [];
+                if (setor === 'mistura') {
+                    opsAguardando = ops.filter(o => o.status === 'Aguardando Mistura');
+                    opsEmAndamento = ops.filter(o => o.status === 'Em Mistura' && o.operadorAtual === currentUser.email);
+                } else if (setor === 'envase') {
+                    opsAguardando = ops.filter(o => o.status === 'Em Envase' && !o.operadorAtual);
+                    opsEmAndamento = ops.filter(o => o.status === 'Em Envase' && o.operadorAtual === currentUser.email);
+                }
+
+                let listaAguardando = opsAguardando.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-check-circle" style="color: var(--verde);"></i><p>Nenhuma OP aguardando</p></div>`
+                    : opsAguardando.map(o => `
+                        <div class="op-card">
+                            <div class="op-card-header">
+                                <div>
+                                    <div class="op-card-numero">${o.numero}</div>
+                                    <div class="op-card-produto"><strong>${escapeHtml(o.produto)}</strong></div>
+                                    <div class="text-small mt-1">Qtd: ${o.quantidade} | Lote: ${escapeHtml(o.lote)}</div>
+                                </div>
+                                <div class="op-card-badge">Aguardando</div>
+                            </div>
+                            ${!minhaMaquina ? '<div class="alert alert-warning" style="margin-bottom:0.75rem;"><i class="fas fa-info-circle"></i> Registre-se em uma máquina primeiro</div>' : ''}
+                            <button class="btn btn-primary btn-xl" onclick="iniciarTrabalho('${o.id}')" ${!minhaMaquina ? 'disabled' : ''}><i class="fas fa-play"></i> Iniciar ${config.nomeTarefa}</button>
+                        </div>
+                    `).join('');
+
+                let listaEmAndamento = opsEmAndamento.length > 0 ? `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-hourglass-half"></i> Em Andamento</div></div>
+                        ${opsEmAndamento.map(o => {
+                            const tempo = calcularTempoDecorrido(o.inicioTrabalho?.timestamp);
+                            return `
+                                <div class="op-card em-andamento">
+                                    <div class="op-card-header">
+                                        <div>
+                                            <div class="op-card-numero">${o.numero}</div>
+                                            <div class="op-card-produto"><strong>${escapeHtml(o.produto)}</strong></div>
+                                        </div>
+                                        <div class="op-card-badge" style="background: var(--verde);">Em Andamento</div>
+                                    </div>
+                                    <div class="tempo-decorrido"><div class="label"><i class="fas fa-stopwatch"></i> Tempo</div><div class="valor" id="tempo-${o.id}">${tempo}</div></div>
+                                    <button class="btn btn-warning btn-xl" id="btn-terminar-${o.id}" onclick="abrirTelaTerminar('${o.id}')"><i class="fas fa-stop-circle"></i> Terminar</button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-home"></i> Olá, ${escapeHtml(currentUser.nome)}</div>
+                            <div class="badge badge-info">${currentUser.cargoLabel} • ${currentUser.turno}</div>
+                        </div>
+                        <div class="clock-display" id="relogioOperario">
+                            <div class="clock-label"><i class="fas fa-clock"></i> Hora atual</div>
+                            <div class="clock-time">--:--:--</div>
+                            <div class="clock-date">Carregando...</div>
+                        </div>
+                    </div>
+                    ${maquinaHtml}
+                    ${listaEmAndamento}
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas ${config.icon}"></i> OPs Aguardando ${config.nomeTarefa}</div></div>
+                        ${listaAguardando}
+                    </div>
+                `;
+            }
+
+            window.logarMaquina = function() {
+                const id = $('#selectMaquina')?.value;
+                if (!id) { alert('Selecione uma máquina.'); return; }
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const m = ms.find(x => x.id === id);
+                if (!m) return;
+                m.operador = currentUser.email; m.operadorNome = currentUser.nome;
+                m.inicioUso = new Date().toISOString(); m.status = 'funcionando';
+                m.obs = `Operando por ${currentUser.nome}`;
+                setStorage(KEYS.MISTURADORES, ms);
+                registrarLog('Máquina Logada', `${currentUser.nome} em ${m.nome}`, 'verde');
+                renderPage(currentPage);
+            };
+
+            window.deslogarMaquina = function(maquinaId) {
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const m = ms.find(x => x.id === maquinaId);
+                if (!m) return;
+                if (!confirm(`Encerrar uso de ${m.nome}?`)) return;
+                const tempo = m.inicioUso ? calcularTempoDecorrido(m.inicioUso) : '00:00:00';
+                m.operador = null; m.operadorNome = null; m.inicioUso = null;
+                m.opAtual = null; m.status = 'standby'; m.obs = 'Aguardando operador';
+                setStorage(KEYS.MISTURADORES, ms);
+                registrarLog('Máquina Deslogada', `${currentUser.nome} encerrou ${m.nome} (${tempo})`, 'info');
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // USUÁRIOS (Admin)
+            // ==========================================================
+            function pageUsuarios() {
+                if (!currentUser.podeCadastrarUsuario) return `<div class="card"><div class="empty-state"><i class="fas fa-lock"></i><p>Acesso restrito</p></div></div>`;
+                const usuarios = getUsuarios();
+                return `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-user-cog"></i> Usuários</div>
+                        <button class="btn btn-primary" onclick="novoUsuario()"><i class="fas fa-plus"></i> Novo Usuário</button></div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Turno</th><th>Senha</th><th>Ações</th></tr></thead>
+                                <tbody>
+                                    ${usuarios.map(u => {
+                                        const c = getCargoInfo(u.cargo);
+                                        return `<tr>
+                                            <td><strong>${escapeHtml(u.nome)}</strong>${u.legacy ? ' <span class="badge badge-legacy">LEGADO</span>' : ''}</td>
+                                            <td>${escapeHtml(u.email)}</td>
+                                            <td><span class="badge" style="background:${c.cor}; color:white;"><i class="fas ${c.icon}"></i> ${c.label}</span></td>
+                                            <td>${escapeHtml(u.turno || '-')}</td>
+                                            <td class="text-small">${escapeHtml(u.senha)}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-secondary" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button>
+                                                ${u.email !== currentUser.email && !u.legacy ? `<button class="btn btn-sm btn-danger" onclick="excluirUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                                            </td>
+                                        </tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.novoUsuario = function() {
+                if (!currentUser.podeCadastrarUsuario) return;
+                const opts = Object.entries(CARGOS).filter(([k]) => !k.includes('legacy')).map(([k, c]) => `<option value="${k}">${c.label}</option>`).join('');
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-user-plus"></i> Novo Usuário</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <form onsubmit="salvarUsuario(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
+                            <div class="form-group"><label>E-mail *</label><input type="email" name="email" required placeholder="nome.sobrenome.cargo@multiperfil.com"></div>
+                            <div class="form-group"><label>Senha *</label><input type="text" name="senha" required value="123456789"></div>
+                            <div class="form-group"><label>Cargo *</label><select name="cargo" required>${opts}</select></div>
+                            <div class="form-group"><label>Turno</label><select name="turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Cadastrar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            };
+
+            window.salvarUsuario = function(e) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const us = getUsuarios();
+                if (us.some(u => u.email.toLowerCase() === d.email.toLowerCase())) { alert('E-mail já cadastrado!'); return; }
+                us.push({ id: gerarId(), ...d, legacy: false });
+                setStorage(KEYS.USUARIOS, us);
+                registrarLog('Usuário Criado', `Novo usuário ${d.nome}`, 'verde');
+                closeModal();
+                popularLogin();
+                renderPage(currentPage);
+            };
+
+            window.editarUsuario = function(id) {
+                if (!currentUser.podeCadastrarUsuario) return;
+                const us = getUsuarios();
+                const u = us.find(x => x.id === id);
+                if (!u) return;
+                const opts = Object.entries(CARGOS).map(([k, c]) => `<option value="${k}" ${u.cargo === k ? 'selected' : ''}>${c.label}</option>`).join('');
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-user-edit"></i> Editar Usuário</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <form onsubmit="atualizarUsuario(event, '${id}')">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nome *</label><input type="text" name="nome" required value="${escapeHtml(u.nome)}"></div>
+                            <div class="form-group"><label>E-mail *</label><input type="email" name="email" required value="${escapeHtml(u.email)}"></div>
+                            <div class="form-group"><label>Senha *</label><input type="text" name="senha" required value="${escapeHtml(u.senha)}"></div>
+                            <div class="form-group"><label>Cargo *</label><select name="cargo" required>${opts}</select></div>
+                            <div class="form-group"><label>Turno</label>
+                                <select name="turno">
+                                    <option ${u.turno === 'Manhã' ? 'selected' : ''}>Manhã</option>
+                                    <option ${u.turno === 'Tarde' ? 'selected' : ''}>Tarde</option>
+                                    <option ${u.turno === 'Noite' ? 'selected' : ''}>Noite</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Atualizar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            };
+
+            window.atualizarUsuario = function(e, id) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const us = getUsuarios();
+                const i = us.findIndex(x => x.id === id);
+                if (i === -1) return;
+                us[i] = { ...us[i], ...d };
+                setStorage(KEYS.USUARIOS, us);
+                registrarLog('Usuário Atualizado', `${d.nome}`, 'info');
+                closeModal();
+                popularLogin();
+                renderPage(currentPage);
+            };
+
+            window.excluirUsuario = function(id) {
+                if (!currentUser.podeCadastrarUsuario) return;
+                const us = getUsuarios();
+                const u = us.find(x => x.id === id);
+                if (!u || u.legacy) return;
+                if (!confirm(`Excluir ${u.nome}?`)) return;
+                setStorage(KEYS.USUARIOS, us.filter(x => x.id !== id));
+                registrarLog('Usuário Excluído', `${u.nome}`, 'vermelho');
+                popularLogin();
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // HISTÓRICO
+            // ==========================================================
+            function pageHistorico() {
+                const logs = getStorage(KEYS.LOGS).slice().reverse().slice(0, 200);
+                let lista = logs.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-history"></i><p>Nenhum registro</p></div>`
+                    : logs.map(l => {
+                        const ic = l.tipo === 'vermelho' ? 'vermelho' : l.tipo === 'verde' ? 'verde' : l.tipo === 'amarelo' ? 'amarelo' : l.tipo === 'roxo' ? 'roxo' : '';
+                        const ico = l.tipo === 'vermelho' ? 'fa-exclamation-circle' : l.tipo === 'verde' ? 'fa-check-circle' : l.tipo === 'amarelo' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+                        return `<div class="log-item">
+                            <div class="log-icon ${ic}"><i class="fas ${ico}"></i></div>
+                            <div class="log-content">
+                                <div class="log-title">${escapeHtml(l.acao)}</div>
+                                <div class="text-small">${escapeHtml(l.detalhes)}</div>
+                                <div class="log-meta">
+                                    <span><i class="fas fa-user"></i> ${escapeHtml(l.usuario)}</span>
+                                    <span><i class="fas fa-tag"></i> ${escapeHtml(l.cargo)}</span>
+                                    <span><i class="fas fa-clock"></i> ${formatDateTime(l.timestamp)}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                return `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-history"></i> Histórico</div>
+                        <button class="btn btn-secondary btn-sm" onclick="limparHistorico()"><i class="fas fa-trash"></i> Limpar</button></div>
+                        ${lista}
+                    </div>`;
+            }
+
+            window.limparHistorico = function() {
+                if (!currentUser.podeCadastrarUsuario) return;
+                if (!confirm('Limpar histórico?')) return;
+                setStorage(KEYS.LOGS, []);
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // PRODUTOS
+            // ==========================================================
+            function pageProdutos() {
+                const produtos = getStorage(KEYS.PRODUTOS);
+                const pode = currentUser.podeCadastrarProduto;
+                return `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-boxes"></i> Produtos</div>
+                        ${pode ? '<button class="btn btn-primary" onclick="novoProduto()"><i class="fas fa-plus"></i> Novo</button>' : ''}</div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>Código</th><th>Nome</th><th>Categoria</th><th>Estoque</th><th>Preço</th>${pode ? '<th>Ações</th>' : ''}</tr></thead>
+                                <tbody>
+                                    ${produtos.length === 0 ? `<tr><td colspan="${pode ? 6 : 5}" class="empty-state"><p>Nenhum produto</p></td></tr>` : produtos.map(p => `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.codigo)}</strong></td>
+                                            <td>${escapeHtml(p.nome)}</td>
+                                            <td><span class="badge">${escapeHtml(p.categoria)}</span></td>
+                                            <td>${p.estoque} ${p.estoque < 100 ? '<span class="badge badge-warning">Baixo</span>' : ''}</td>
+                                            <td>${formatCurrency(p.preco)}</td>
+                                            ${pode ? `<td><button class="btn btn-sm btn-danger" onclick="excluirProduto('${p.id}')"><i class="fas fa-trash"></i></button></td>` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            }
+
+            window.novoProduto = function() {
+                if (!currentUser.podeCadastrarProduto) return;
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Novo Produto</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <form onsubmit="salvarProduto(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Código *</label><input type="text" name="codigo" required></div>
+                            <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
+                            <div class="form-group"><label>Categoria *</label><select name="categoria" required>
+                                <option value="">Selecione</option><option>Massa</option><option>Rejunte</option><option>Gesso</option>
+                                <option>Cola</option><option>Selador</option><option>Perfil</option><option>Placa</option>
+                            </select></div>
+                            <div class="form-group"><label>Estoque Inicial</label><input type="number" name="estoque" value="0" min="0"></div>
+                            <div class="form-group"><label>Preço (R$) *</label><input type="number" name="preco" step="0.01" min="0" required></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Cadastrar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            };
+
+            window.salvarProduto = function(e) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ps = getStorage(KEYS.PRODUTOS);
+                if (ps.some(p => p.codigo === d.codigo)) { alert('Código já existe!'); return; }
+                ps.push({ id: gerarId(), ...d, estoque: parseInt(d.estoque) || 0, preco: parseFloat(d.preco) || 0 });
+                setStorage(KEYS.PRODUTOS, ps);
+                registrarLog('Produto Cadastrado', `${d.nome}`, 'verde');
+                closeModal();
+                renderPage(currentPage);
+            };
+
+            window.excluirProduto = function(id) {
+                if (!currentUser.podeCadastrarProduto) return;
+                if (!confirm('Excluir?')) return;
+                const ps = getStorage(KEYS.PRODUTOS);
+                const p = ps.find(x => x.id === id);
+                setStorage(KEYS.PRODUTOS, ps.filter(x => x.id !== id));
+                registrarLog('Produto Excluído', `${p?.nome}`, 'vermelho');
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // RETROCEDER
+            // ==========================================================
+            window.retrocederProcesso = function(opId) {
+                if (!currentUser.podeRetroceder) { alert('Acesso restrito.'); return; }
+                const ops = getStorage(KEYS.OPS);
+                const op = ops.find(o => o.id === opId);
+                if (!op) return;
+                let anterior = null;
+                if (op.status === 'Em Qualidade') anterior = 'Em Mistura';
+                else if (op.status === 'Em Envase') anterior = 'Em Qualidade';
+                else if (op.status === 'Em Laboratório') anterior = 'Em Envase';
+                else if (op.status === 'Encerrada') anterior = 'Em Laboratório';
+                else if (op.status === 'Em Mistura') anterior = 'Aguardando Mistura';
+                else { alert('Não é possível retroceder de: ' + op.status); return; }
+
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-undo"></i> Retroceder ${op.numero}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i><strong>${op.status} → ${anterior}</strong></div>
+                    <form onsubmit="confirmarRetroceder(event, '${op.id}', '${anterior}')">
+                        <div class="form-group"><label>Motivo *</label><textarea name="motivo" rows="3" required></textarea></div>
+                        <div class="form-group mt-2"><label>Tipo de Falha *</label>
+                            <select name="tipoFalha" required><option value="">Selecione</option>
+                            <option>Falha de Qualidade</option><option>Falha de Mistura</option><option>Falha de Envase</option>
+                            <option>Falha de Matéria-Prima</option><option>Contaminação</option><option>Erro de Processo</option><option>Outro</option></select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-danger"><i class="fas fa-undo"></i> Confirmar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            };
+
+            window.confirmarRetroceder = function(e, opId, anterior) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ops = getStorage(KEYS.OPS);
+                const op = ops.find(o => o.id === opId);
+                if (!op) return;
+                const orig = op.status;
+                op.status = anterior;
+                delete op.operadorAtual;
+                op.historico = op.historico || [];
+                op.historico.push({ setor: currentUser.nome, acao: `🔴 RETROCESSO: ${orig} → ${anterior} | ${d.motivo} | ${d.tipoFalha}`, timestamp: new Date().toISOString(), tipo: 'retrocesso' });
+                setStorage(KEYS.OPS, ops);
+                registrarLog('Processo Retrocedido', `${op.numero}: ${orig} → ${anterior}`, 'vermelho');
+                closeModal();
+                renderPage(currentPage);
+                alert(`⚠️ OP retrocedida!`);
+            };
+
+            // ==========================================================
+            // PCP
+            // ==========================================================
+            function pageOPsPCP() {
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                let lista = ops.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>Nenhuma OP</p></div>`
+                    : `<div class="table-responsive"><table>
+                        <thead><tr><th>Nº OP</th><th>Produto</th><th>Qtd</th><th>Lote</th><th>Status</th><th>Operador</th><th>Ações</th></tr></thead>
+                        <tbody>
+                            ${ops.map(o => `<tr>
+                                <td><strong>${escapeHtml(o.numero)}</strong></td>
+                                <td>${escapeHtml(o.produto)}</td>
+                                <td>${o.quantidade}</td>
+                                <td><span class="badge">${escapeHtml(o.lote)}</span></td>
+                                <td><span class="badge ${statusBadgeClass(o.status)}">${o.status}</span></td>
+                                <td class="text-small">${escapeHtml(o.inicioTrabalho?.operador || '-')}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-secondary" onclick="verOP('${o.id}')"><i class="fas fa-eye"></i></button>
+                                    ${currentUser.podeRetroceder && o.status !== 'Aguardando Mistura' ? `<button class="btn btn-sm btn-danger" onclick="retrocederProcesso('${o.id}')"><i class="fas fa-undo"></i></button>` : ''}
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table></div>`;
+
+                return `
+                    <div class="alert alert-info"><i class="fas fa-info-circle"></i>
+                        <strong>PCP:</strong> Fluxo: PCP → Mistura → Qualidade → Envase → Laboratório.</div>
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-tasks"></i> Painel do PCP</div>
+                        <button class="btn btn-primary" id="btnNovaOP"><i class="fas fa-plus"></i> Nova OP</button></div>
+                        ${lista}
+                    </div>`;
+            }
+
+            window.verOP = function(id) {
+                const op = getStorage(KEYS.OPS).find(o => o.id === id);
+                if (!op) return;
+                const etapa = FLUXO_OP.findIndex(f => f.status === op.status);
+                let tl = '<div class="timeline-op">';
+                FLUXO_OP.forEach((e, i) => {
+                    let c = i < etapa ? 'completa' : i === etapa ? 'atual' : '';
+                    tl += `<div class="timeline-etapa ${c}"><div class="timeline-circle"><i class="fas ${e.icon}"></i></div><div class="timeline-label">${e.label}</div></div>`;
+                });
+                tl += '</div>';
+
+                let regs = '';
+                if (op.registros) {
+                    for (const [s, d] of Object.entries(op.registros)) {
+                        regs += `<div class="alert alert-info"><i class="fas fa-check-circle"></i><div><strong>${s.toUpperCase()}:</strong><br>
+                            Início: ${d.inicio?.hora || '-'}<br>Término: ${d.fim?.hora || '-'}<br>Tempo: ${d.fim?.tempoDecorrido || '-'}<br>Operador: ${escapeHtml(d.fim?.operador || '-')}</div></div>`;
+                    }
+                }
+
+                let qual = '';
+                if (op.qualidade) {
+                    qual = `<h4 style="color: var(--roxo); margin: 1rem 0 0.5rem;"><i class="fas fa-vial"></i> Qualidade</h4>
+                        <div class="info-grid">
+                            <div class="info-block"><div class="info-block-label">Analisado por</div><div class="info-block-value">${escapeHtml(op.qualidade.analisadoPor)}</div></div>
+                            <div class="info-block"><div class="info-block-label">Resultado</div><div class="info-block-value">${escapeHtml(op.qualidade.resultado)}</div></div>
+                        </div>`;
+                }
+
+                let hist = '';
+                if (op.historico?.length > 0) {
+                    hist = `<h4 style="color: var(--azul-escuro); margin: 1rem 0 0.5rem;"><i class="fas fa-history"></i> Histórico</h4>
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>Setor</th><th>Ação</th><th>Data/Hora</th></tr></thead>
+                            <tbody>${op.historico.map(h => `<tr><td><strong>${escapeHtml(h.setor)}</strong></td><td>${escapeHtml(h.acao)}</td><td class="text-small">${formatDateTime(h.timestamp)}</td></tr>`).join('')}</tbody>
+                        </table></div>`;
+                }
+
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-clipboard-list"></i> ${op.numero}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    ${tl}
+                    <div class="info-grid">
+                        <div class="info-block"><div class="info-block-label">Produto</div><div class="info-block-value">${escapeHtml(op.produto)}</div></div>
+                        <div class="info-block"><div class="info-block-label">Qtd</div><div class="info-block-value">${op.quantidade}</div></div>
+                        <div class="info-block"><div class="info-block-label">Lote</div><div class="info-block-value">${escapeHtml(op.lote)}</div></div>
+                        <div class="info-block"><div class="info-block-label">Status</div><div class="info-block-value"><span class="badge ${statusBadgeClass(op.status)}">${op.status}</span></div></div>
+                    </div>
+                    ${regs}${qual}${hist}
+                    <div class="form-actions">
+                        ${currentUser.podeRetroceder && op.status !== 'Aguardando Mistura' ? `<button class="btn btn-danger" onclick="closeModal(); retrocederProcesso('${op.id}')"><i class="fas fa-undo"></i> Retroceder</button>` : ''}
+                        <button class="btn btn-secondary" onclick="closeModal()">Fechar</button>
+                    </div>
+                `, true);
+            };
+
+            // ==========================================================
+            // LABORATÓRIO
+            // ==========================================================
+            function pageLaboratorio() {
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const pend = ops.filter(o => o.status === 'Em Laboratório');
+                let lista = pend.length === 0
+                    ? `<div class="empty-state"><i class="fas fa-microscope"></i><p>Nenhuma OP</p></div>`
+                    : pend.map(o => `<div class="card" style="background: var(--fundo-claro); box-shadow: none; margin-bottom: 1rem;">
+                        <div class="flex-between">
+                            <div><h4 style="color: var(--azul-escuro);">${o.numero} - ${escapeHtml(o.produto)}</h4>
+                                <div class="text-small">Qtd: ${o.quantidade} | Lote: ${escapeHtml(o.lote)}</div></div>
+                            <button class="btn btn-success" onclick="abrirLaboratorio('${o.id}')"><i class="fas fa-microscope"></i> Analisar</button>
+                        </div></div>`).join('');
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-microscope"></i> Laboratório</div></div>${lista}</div>`;
+            }
+
+            window.abrirLaboratorio = function(id) {
+                const op = getStorage(KEYS.OPS).find(o => o.id === id);
+                if (!op) return;
+                let regs = '';
+                if (op.registros) {
+                    for (const [s, d] of Object.entries(op.registros)) {
+                        regs += `<h4 style="color: var(--azul-escuro); margin: 1rem 0 0.5rem;">${s.toUpperCase()}</h4>
+                            <div class="info-grid">
+                                <div class="info-block"><div class="info-block-label">Início</div><div class="info-block-value">${d.inicio?.hora || '-'}</div></div>
+                                <div class="info-block"><div class="info-block-label">Término</div><div class="info-block-value">${d.fim?.hora || '-'}</div></div>
+                                <div class="info-block"><div class="info-block-label">Tempo</div><div class="info-block-value">${d.fim?.tempoDecorrido || '-'}</div></div>
+                                <div class="info-block"><div class="info-block-label">Operador</div><div class="info-block-value">${escapeHtml(d.fim?.operador || '-')}</div></div>
+                            </div>`;
+                    }
+                }
+                let qual = op.qualidade ? `<h4 style="color: var(--roxo); margin: 1rem 0 0.5rem;"><i class="fas fa-vial"></i> Qualidade</h4>
+                    <div class="info-grid"><div class="info-block"><div class="info-block-label">Analisado por</div><div class="info-block-value">${escapeHtml(op.qualidade.analisadoPor)}</div></div>
+                    <div class="info-block"><div class="info-block-label">Resultado</div><div class="info-block-value">${escapeHtml(op.qualidade.resultado)}</div></div></div>` : '';
+
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-microscope"></i> ${op.numero}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <div class="info-grid">
+                        <div class="info-block"><div class="info-block-label">Produto</div><div class="info-block-value">${escapeHtml(op.produto)}</div></div>
+                        <div class="info-block"><div class="info-block-label">Qtd</div><div class="info-block-value">${op.quantidade}</div></div>
+                        <div class="info-block"><div class="info-block-label">Lote</div><div class="info-block-value">${escapeHtml(op.lote)}</div></div>
+                    </div>
+                    ${regs}${qual}
+                    <form onsubmit="encerrarOP(event, '${id}')" style="margin-top: 1rem;">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Analisado por *</label><input type="text" name="analisadoPor" required value="${escapeHtml(currentUser.nome)}"></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Observações</label><textarea name="observacoes" rows="2"></textarea></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-success"><i class="fas fa-check-circle"></i> Encerrar</button>
+                            <button type="button" class="btn btn-danger" onclick="closeModal(); retrocederProcesso('${op.id}')"><i class="fas fa-undo"></i> Retroceder</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `, true);
+            };
+
+            window.encerrarOP = function(e, id) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ops = getStorage(KEYS.OPS);
+                const op = ops.find(o => o.id === id);
+                if (!op) return;
+                op.laboratorio = { analisadoPor: d.analisadoPor, dataAnalise: new Date().toISOString(), observacoes: d.observacoes };
+                op.status = 'Encerrada';
+                op.historico = op.historico || [];
+                op.historico.push({ setor: currentUser.nome, acao: 'OP encerrada', timestamp: new Date().toISOString() });
+                setStorage(KEYS.OPS, ops);
+                registrarLog('OP Encerrada', `${op.numero}`, 'verde');
+                closeModal();
+                renderPage(currentPage);
+                alert('✅ OP encerrada!');
+            };
+
+            // ==========================================================
+            // INICIAR TRABALHO (operário)
+            // ==========================================================
+            window.iniciarTrabalho = function(opId) {
+                const op = getStorage(KEYS.OPS).find(o => o.id === opId);
+                if (!op) return;
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const minha = ms.find(m => m.operador === currentUser.email);
+                if (!minha) { alert('Registre-se em uma máquina primeiro.'); return; }
+                const setor = currentUser.setor;
+                const config = getConfigSetor(setor, op);
+                const agora = new Date();
+                const hora = agora.toLocaleTimeString('pt-BR');
+                const data = agora.toLocaleDateString('pt-BR');
+                const dataCompleta = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+                const tMin = getTempoMinimoSeg(op, setor);
+
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas ${config.icon}"></i> Iniciar ${config.nomeTarefa}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <div class="info-grid">
+                        <div class="info-block"><div class="info-block-label">OP</div><div class="info-block-value">${op.numero}</div></div>
+                        <div class="info-block"><div class="info-block-label">Produto</div><div class="info-block-value">${escapeHtml(op.produto)}</div></div>
+                        <div class="info-block"><div class="info-block-label">Máquina</div><div class="info-block-value">${escapeHtml(minha.nome)}</div></div>
+                    </div>
+                    <div class="clock-display" style="padding: 1.5rem;">
+                        <div class="clock-label"><i class="fas fa-play-circle"></i> Início Automático</div>
+                        <div class="clock-time" style="font-size: 2.5rem;">${hora}</div>
+                        <div class="clock-date">${dataCompleta}</div>
+                    </div>
+                    ${tMin ? `<div class="alert alert-warning"><i class="fas fa-lock"></i><strong>Tempo mínimo: ${fmtMinSeg(tMin)}</strong></div>` : ''}
+                    <div class="form-actions">
+                        <button class="btn btn-success btn-xl" onclick="confirmarInicio('${op.id}', '${hora}', '${data}', '${agora.toISOString()}')"><i class="fas fa-play"></i> Confirmar Início</button>
+                        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    </div>
+                `, true);
+            };
+
+            window.confirmarInicio = function(opId, hora, data, ts) {
+                const ops = getStorage(KEYS.OPS);
+                const op = ops.find(o => o.id === opId);
+                if (!op) return;
+                const setor = currentUser.setor;
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const minha = ms.find(m => m.operador === currentUser.email);
+                op.status = setor === 'mistura' ? 'Em Mistura' : 'Em Envase';
+                op.operadorAtual = currentUser.email;
+                op.inicioTrabalho = { hora, data, timestamp: ts, operador: currentUser.nome, setor, tempoMinimoSeg: getTempoMinimoSeg(op, setor), maquina: minha?.nome || null };
+                op.historico = op.historico || [];
+                op.historico.push({ setor: currentUser.nome, acao: `${getConfigSetor(setor).nomeTarefa} iniciado`, timestamp: ts });
+                if (minha) { minha.opAtual = op.numero; setStorage(KEYS.MISTURADORES, ms); }
+                setStorage(KEYS.OPS, ops);
+                registrarLog('Trabalho Iniciado', `${op.numero}`, 'info');
+                closeModal();
+                renderPage(currentPage);
+                iniciarTempoDecorrido(opId);
+            };
+
+            function getConfigSetor(setor, op) {
+                const c = {
+                    mistura: { nomeTarefa: 'Mistura', icon: 'fa-flask' },
+                    envase: { nomeTarefa: 'Envase', icon: 'fa-fill-drip' }
+                };
+                return c[setor] || c.mistura;
+            }
+
+            function iniciarTempoDecorrido(opId) {
+                const iid = 'tempo-' + opId;
+                if (relogioIntervals[iid]) clearInterval(relogioIntervals[iid]);
+                function atualizar() {
+                    const el = document.getElementById('tempo-' + opId);
+                    if (!el) { clearInterval(relogioIntervals[iid]); return; }
+                    const ops = getStorage(KEYS.OPS);
+                    const op = ops.find(o => o.id === opId);
+                    if (!op || !op.inicioTrabalho) return;
+                    el.textContent = calcularTempoDecorrido(op.inicioTrabalho.timestamp);
+                }
+                atualizar();
+                relogioIntervals[iid] = setInterval(atualizar, 1000);
+            }
+
+            // ==========================================================
+            // TERMINAR
+            // ==========================================================
+            window.abrirTelaTerminar = function(opId) {
+                const op = getStorage(KEYS.OPS).find(o => o.id === opId);
+                if (!op) return;
+                const setor = currentUser.setor;
+                const config = getConfigSetor(setor, op);
+                const falta = getTempoMinimoSeg(op, setor) - getSegDecorridos(op);
+                if (falta > 0) { alert(`⏳ Faltam ${fmtMinSeg(falta)}`); return; }
+                const agora = new Date();
+                const horaFim = agora.toLocaleTimeString('pt-BR');
+                const dataFim = agora.toLocaleDateString('pt-BR');
+                const td = calcularTempoDecorrido(op.inicioTrabalho?.timestamp);
+
+                let campos = '';
+                if (setor === 'mistura') {
+                    campos = `<h4 style="color: var(--azul-escuro); margin: 1rem 0 0.5rem;">Dados da Mistura</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Densidade Inicial *</label><input type="number" name="densidadeInicial" step="0.01" required></div>
+                            <div class="form-group"><label>Densidade Final *</label><input type="number" name="densidadeFinal" step="0.01" required></div>
+                            <div class="form-group"><label>pH *</label><input type="number" name="ph" step="0.1" required></div>
+                            <div class="form-group"><label>Placas *</label><select name="placas" required><option value="">Selecione</option><option>Aprovadas</option><option>Reprovadas</option><option>Com Ressalvas</option></select></div>
+                        </div>`;
+                } else if (setor === 'envase') {
+                    campos = `<h4 style="color: var(--azul-escuro); margin: 1rem 0 0.5rem;">Dados do Envase</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Misturador *</label><select name="misturador" required><option value="">Selecione</option><option>Misturador 01</option><option>Misturador 02</option><option>Misturador 03</option></select></div>
+                            <div class="form-group"><label>Quantidade Envasada *</label><input type="number" name="quantidadeEnvasada" min="0" required value="0"></div>
+                        </div>`;
+                }
+
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-stop-circle"></i> Terminar ${config.nomeTarefa}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <div class="painel-andamento"><div class="label"><i class="fas fa-play-circle"></i> Início</div><div class="hora-grande">${op.inicioTrabalho?.hora}</div><div class="data-info">${op.inicioTrabalho?.data} • ${escapeHtml(op.inicioTrabalho?.operador || '')}</div></div>
+                    <div class="painel-andamento" style="background: linear-gradient(135deg, #1e6b3b, #155d32);"><div class="label"><i class="fas fa-stop-circle"></i> Término</div><div class="hora-grande">${horaFim}</div><div class="data-info">${dataFim}</div></div>
+                    <div class="tempo-decorrido"><div class="label"><i class="fas fa-stopwatch"></i> Tempo</div><div class="valor">${td}</div></div>
+                    <form onsubmit="finalizarTrabalho(event, '${op.id}', '${horaFim}', '${dataFim}', '${agora.toISOString()}', '${td}')">
+                        ${campos}
+                        <div class="form-actions" style="margin-top: 1.5rem;">
+                            <button type="submit" class="btn btn-success btn-xl"><i class="fas fa-check-circle"></i> Confirmar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `, true);
+            };
+
+            window.finalizarTrabalho = function(e, opId, horaFim, dataFim, tsFim, td) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ops = getStorage(KEYS.OPS);
+                const op = ops.find(o => o.id === opId);
+                if (!op) return;
+                const setor = currentUser.setor;
+                op.fimTrabalho = { hora: horaFim, data: dataFim, timestamp: tsFim, operador: currentUser.nome, setor, tempoDecorrido: td };
+                op.registros = op.registros || {};
+                op.registros[setor] = { inicio: op.inicioTrabalho, fim: op.fimTrabalho, dados: d };
+                if (setor === 'mistura') op.status = 'Em Qualidade';
+                else if (setor === 'envase') op.status = 'Em Laboratório';
+                delete op.operadorAtual;
+
+                if (setor === 'envase') {
+                    const env = parseInt(d.quantidadeEnvasada) || 0;
+                    const perdaQtd = op.quantidade - env;
+                    if (perdaQtd > 0) {
+                        const ps = getStorage(KEYS.PERDAS);
+                        const nova = { id: gerarId(), opNumero: op.numero, produtoNome: op.produto, setor: 'Envase', qtd: perdaQtd, motivo: 'Diferença', percentual: parseFloat(((perdaQtd / op.quantidade) * 100).toFixed(1)), data: new Date().toISOString() };
+                        ps.push(nova);
+                        setStorage(KEYS.PERDAS, ps);
+                        enviarPerdaParaPA(nova);
+                    }
+                }
+
+                op.historico = op.historico || [];
+                op.historico.push({ setor: currentUser.nome, acao: `${getConfigSetor(setor).nomeTarefa} finalizado`, timestamp: tsFim });
+
+                setStorage(KEYS.OPS, ops);
+                registrarLog('Trabalho Finalizado', `${op.numero} - ${setor}`, 'verde');
+
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const m = ms.find(x => x.operador === currentUser.email);
+                if (m) { m.opAtual = null; setStorage(KEYS.MISTURADORES, ms); }
+
+                closeModal();
+                renderPage(currentPage);
+                alert('✅ Finalizado!');
+            };
+
+            // ==========================================================
+            // MISTURADORES
+            // ==========================================================
+            function pageMisturadoresAdmin() {
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const sl = { funcionando: 'Em Funcionamento', standby: 'Em Standby', defeito: 'Com Defeito', desligado: 'Desligado' };
+                const si = { funcionando: 'fa-check-circle', standby: 'fa-pause-circle', defeito: 'fa-exclamation-triangle', desligado: 'fa-power-off' };
+                const cards = ms.map(m => `
+                    <div class="misturador-card ${m.status}">
+                        <div class="misturador-icon"><i class="fas ${si[m.status]}"></i></div>
+                        <div class="misturador-nome">${escapeHtml(m.nome)}</div>
+                        <div class="misturador-status">${sl[m.status]}</div>
+                        ${m.operadorNome ? `<div class="text-small mt-1"><i class="fas fa-user"></i> ${escapeHtml(m.operadorNome)}</div>` : ''}
+                        <div class="misturador-obs">${escapeHtml(m.obs || '')}</div>
+                        <button class="btn btn-sm btn-secondary mt-2" onclick="editarMisturador('${m.id}')"><i class="fas fa-edit"></i> Editar</button>
+                    </div>`).join('');
+                return `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-cogs"></i> Misturadores</div>
+                        ${currentUser.cargo === 'admin' ? '<button class="btn btn-primary btn-sm" onclick="novoMisturador()"><i class="fas fa-plus"></i> Adicionar</button>' : ''}</div>
+                        <div class="misturadores-grid">${cards}</div>
+                    </div>`;
+            }
+
+            window.editarMisturador = function(id) {
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const m = ms.find(x => x.id === id);
+                if (!m) return;
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-cogs"></i> Editar</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <form onsubmit="salvarMisturador(event, '${id}')">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nome *</label><input type="text" name="nome" required value="${escapeHtml(m.nome)}"></div>
+                            <div class="form-group"><label>Status *</label>
+                                <select name="status" required>
+                                    <option value="funcionando" ${m.status === 'funcionando' ? 'selected' : ''}>Funcionando</option>
+                                    <option value="standby" ${m.status === 'standby' ? 'selected' : ''}>Standby</option>
+                                    <option value="defeito" ${m.status === 'defeito' ? 'selected' : ''}>Com Defeito</option>
+                                    <option value="desligado" ${m.status === 'desligado' ? 'selected' : ''}>Desligado</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Observações</label><input type="text" name="obs" value="${escapeHtml(m.obs || '')}"></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            };
+
+            window.salvarMisturador = function(e, id) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                const i = ms.findIndex(x => x.id === id);
+                if (i === -1) return;
+                ms[i] = { ...ms[i], ...d };
+                setStorage(KEYS.MISTURADORES, ms);
+                closeModal();
+                renderPage(currentPage);
+            };
+
+            window.novoMisturador = function() {
+                if (currentUser.cargo !== 'admin') return;
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Novo</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <form onsubmit="salvarNovoMisturador(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
+                            <div class="form-group"><label>Status</label><select name="status"><option value="standby">Standby</option><option value="funcionando">Funcionando</option><option value="defeito">Com Defeito</option></select></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Observações</label><input type="text" name="obs"></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Adicionar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            };
+
+            window.salvarNovoMisturador = function(e) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                ms.push({ id: gerarId(), operador: null, operadorNome: null, opAtual: null, inicioUso: null, ...d });
+                setStorage(KEYS.MISTURADORES, ms);
+                closeModal();
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // OPERÁRIOS
+            // ==========================================================
+            function pageOperarios() {
+                if (currentUser.cargo !== 'admin') return `<div class="card"><div class="empty-state"><i class="fas fa-lock"></i><p>Acesso restrito</p></div></div>`;
+                const us = getUsuarios().filter(u => getCargoInfo(u.cargo).tipo === 'operario');
+                return `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title"><i class="fas fa-users"></i> Operários</div></div>
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Turno</th></tr></thead>
+                            <tbody>${us.map(u => {
+                                const c = getCargoInfo(u.cargo);
+                                return `<tr><td><strong>${escapeHtml(u.nome)}</strong>${u.legacy ? ' <span class="badge badge-legacy">LEGADO</span>' : ''}</td>
+                                    <td>${escapeHtml(u.email)}</td>
+                                    <td><span class="badge"><i class="fas ${c.icon}"></i> ${c.label}</span></td>
+                                    <td>${escapeHtml(u.turno || '-')}</td></tr>`;
+                            }).join('')}</tbody>
+                        </table></div>
+                    </div>`;
+            }
+
+            // ==========================================================
+            // ENTRADAS/SAÍDAS/LOTES/PERDAS/EFICIÊNCIA
+            // ==========================================================
+            function pageEntradas() {
+                const e = getStorage(KEYS.ENTRADAS);
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-arrow-down"></i> Entradas</div></div>
+                    <div class="table-responsive"><table><thead><tr><th>Data</th><th>NF</th><th>Fornecedor</th><th>Produto</th><th>Qtd</th></tr></thead>
+                    <tbody>${e.length === 0 ? '<tr><td colspan="5" class="empty-state"><p>Nenhuma entrada</p></td></tr>' : e.map(x => `<tr><td>${new Date(x.data).toLocaleDateString('pt-BR')}</td><td>${escapeHtml(x.nf)}</td><td>${escapeHtml(x.fornecedor)}</td><td>${escapeHtml(x.produtoNome)}</td><td>${x.qtd}</td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+
+            function pageSaidas() {
+                const s = getStorage(KEYS.SAIDAS);
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-arrow-up"></i> Saídas</div></div>
+                    <div class="table-responsive"><table><thead><tr><th>Data</th><th>Cliente</th><th>Produto</th><th>Qtd</th></tr></thead>
+                    <tbody>${s.length === 0 ? '<tr><td colspan="4" class="empty-state"><p>Nenhuma saída</p></td></tr>' : s.map(x => `<tr><td>${new Date(x.data).toLocaleDateString('pt-BR')}</td><td>${escapeHtml(x.cliente)}</td><td>${escapeHtml(x.produtoNome)}</td><td>${x.qtd}</td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+
+            function pageLotes() {
+                const l = getStorage(KEYS.LOTES);
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-barcode"></i> Lotes</div></div>
+                    <div class="table-responsive"><table><thead><tr><th>Lote</th><th>Produto</th><th>Setor</th><th>Qtd</th><th>Status</th></tr></thead>
+                    <tbody>${l.length === 0 ? '<tr><td colspan="5" class="empty-state"><p>Nenhum lote</p></td></tr>' : l.map(x => `<tr><td><strong>${escapeHtml(x.codigo)}</strong></td><td>${escapeHtml(x.produtoNome)}</td><td>${escapeHtml(x.setor)}</td><td>${x.quantidade}</td><td><span class="badge">${escapeHtml(x.status)}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+
+            function pagePerdas() {
+                const p = getStorage(KEYS.PERDAS).slice().reverse();
+                const pode = currentUser.podeExcluir;
+                const lista = p.length === 0 ? '<div class="empty-state"><i class="fas fa-trash-alt"></i><p>Nenhuma perda</p></div>' :
+                    p.map(x => `<div class="linha-metrica">
+                        <div style="min-width:200px;"><div style="font-weight:600;">${escapeHtml(x.produtoNome || '-')}</div><div class="text-small">${escapeHtml(x.motivo || '')} • ${formatDateTime(x.data)}</div></div>
+                        <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:200px;">
+                            <span class="text-small" style="min-width:70px;">${escapeHtml(x.setor || '')}</span>
+                            <div class="barra-progresso"><div class="barra-preenchimento" style="width:${Math.min((x.percentual || 0) * 10, 100)}%; background:${x.percentual > 3 ? 'var(--vermelho)' : 'var(--cinza-aco)'};"></div></div>
+                            <span style="font-weight:700; color: var(--azul-escuro); min-width:80px; text-align:right;">${x.qtd} un • ${x.percentual}%</span>
+                        </div>
+                        ${pode ? `<button class="btn btn-sm btn-danger" onclick="excluirPerda('${x.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>`).join('');
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-trash-alt"></i> Perdas</div></div>${lista}</div>`;
+            }
+
+            window.excluirPerda = function(id) {
+                if (!currentUser.podeExcluir) return;
+                if (!confirm('Excluir?')) return;
+                setStorage(KEYS.PERDAS, getStorage(KEYS.PERDAS).filter(p => p.id !== id));
+                renderPage(currentPage);
+            };
+
+            function pageEficiencia() {
+                const ef = calcularEficiencia();
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-tachometer-alt"></i> Eficiência</div></div>
+                    <div class="kpi-grid">
+                        <div class="kpi-item"><div class="kpi-value">${ef.rendimento}%</div><div class="kpi-label">Rendimento</div></div>
+                        <div class="kpi-item"><div class="kpi-value">${ef.perdaMedia}%</div><div class="kpi-label">Perda Média</div></div>
+                    </div></div>`;
+            }
+
+            function pageChatEmbed() {
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-comments"></i> Chat</div></div>
+                    <div class="alert alert-info"><i class="fas fa-info-circle"></i> Use o botão flutuante.</div></div>`;
+            }
+
+            function calcularEficiencia() {
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const perdas = getStorage(KEYS.PERDAS);
+                const cE = ops.filter(o => o.registros?.envase?.dados);
+                const pl = cE.reduce((a, o) => a + (o.quantidade || 0), 0);
+                const en = cE.reduce((a, o) => a + (parseInt(o.registros.envase.dados.quantidadeEnvasada) || 0), 0);
+                return {
+                    rendimento: pl ? Math.min(100, (en / pl) * 100).toFixed(1) : '100.0',
+                    perdaMedia: perdas.length ? (perdas.reduce((a, p) => a + (p.percentual || 0), 0) / perdas.length).toFixed(1) : '0.0',
+                    encerradas: ops.filter(o => o.status === 'Encerrada').length
+                };
+            }
+
+            // ==========================================================
+            // POWER AUTOMATE
+            // ==========================================================
+            async function chamarPowerAutomate(url, payload) {
+                if (!PA_CONFIGURADO || !url || url.includes('SUBSTITUA_AQUI')) return null;
+                try {
+                    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    return await r.json().catch(() => ({}));
+                } catch (e) { return null; }
+            }
+
+            function enviarPerdaParaPA(p) { return chamarPowerAutomate(POWER_AUTOMATE.WEBHOOK_PERDAS, { tipo: 'PERDA_REGISTRADA', ...p }); }
+            function verificarEstoqueBaixo() {
+                const ps = getStorage(KEYS.PRODUTOS);
+                const c = ps.filter(p => (p.estoque || 0) < 100);
+                if (c.length === 0) return null;
+                return chamarPowerAutomate(POWER_AUTOMATE.WEBHOOK_ESTOQUE, { produtos: c });
+            }
+
+            // ==========================================================
+            // CHAT
+            // ==========================================================
+            function renderChatComIA() {
+                const c = $('#chatMessages');
+                if (!c) return;
+                const tS = $('#tabSetores'), tI = $('#tabIA'), sB = $('#chatSetores'), iB = $('#iaAviso');
+                if (tS) tS.classList.toggle('ativo', !chatIAModo);
+                if (tI) tI.classList.toggle('ativo', chatIAModo);
+                if (sB) sB.classList.toggle('hidden', chatIAModo);
+                if (iB) iB.classList.toggle('hidden', !chatIAModo);
+
+                if (chatIAModo) {
+                    const h = getStorage(KEYS.CHAT_IA);
+                    c.innerHTML = h.length === 0 ? `<div class="empty-state" style="padding:2rem 1rem;"><i class="fas fa-robot" style="color:var(--azul-escuro);"></i><p>IA Assistente</p></div>` :
+                        h.map(m => `<div class="message ${m.role === 'user' ? 'message-out' : 'message-ia'}"><div class="message-info"><span><i class="fas ${m.role === 'user' ? 'fa-user-circle' : 'fa-robot'}"></i> ${m.role === 'user' ? 'Você' : 'IA'}</span><span>${formatDateTime(m.timestamp)}</span></div><div>${escapeHtml(m.text)}</div></div>`).join('');
+                } else {
+                    const ms = getStorage(KEYS.CHAT);
+                    const f = setorSelecionado === 'todos' ? ms : ms.filter(m => m.target === setorSelecionado || m.sender === setorSelecionado);
+                    c.innerHTML = f.length === 0 ? '<div class="empty-state" style="padding:2rem 1rem;"><i class="fas fa-comments"></i><p>Nenhuma mensagem</p></div>' :
+                        f.map(m => `<div class="message ${m.type === 'out' ? 'message-out' : 'message-in'}"><div class="message-info"><span><i class="fas fa-user-circle"></i> ${escapeHtml(m.sender)}${m.target ? ' → ' + escapeHtml(m.target) : ''}</span><span>${formatDateTime(m.timestamp)}</span></div><div>${escapeHtml(m.text)}</div></div>`).join('');
+                }
+                c.scrollTop = c.scrollHeight;
+            }
+
+            window.setChatModo = function(m) { chatIAModo = m; renderChatComIA(); };
+            window.mudarSetorChat = function(s) { setorSelecionado = s; renderChatComIA(); };
+
+            async function sendChatMessageComIA() {
+                if (!currentUser) return;
+                const inp = $('#chatInput');
+                const t = inp.value.trim();
+                if (!t) return;
+                inp.value = '';
+
+                if (chatIAModo) {
+                    const h = getStorage(KEYS.CHAT_IA);
+                    h.push({ role: 'user', text: t, timestamp: new Date().toISOString() });
+                    setStorage(KEYS.CHAT_IA, h);
+                    renderChatComIA();
+                    const r = await chamarPowerAutomate(POWER_AUTOMATE.WEBHOOK_CHAT_IA, { mensagem: t, setor: currentUser.cargoLabel });
+                    const txt = (r && (r.resposta || r.texto)) || '⚠️ IA indisponível.';
+                    h.push({ role: 'assistant', text: txt, timestamp: new Date().toISOString() });
+                    setStorage(KEYS.CHAT_IA, h);
+                    renderChatComIA();
+                } else {
+                    const ms = getStorage(KEYS.CHAT);
+                    ms.push({ id: gerarId(), text: t, sender: currentUser.cargoLabel, target: setorSelecionado === 'todos' ? null : setorSelecionado, email: currentUser.email, timestamp: new Date().toISOString(), type: 'out' });
+                    setStorage(KEYS.CHAT, ms);
+                    renderChatComIA();
+                    updateChatBadge();
+                }
+            }
+
+            function toggleChat() {
+                chatOpen = !chatOpen;
+                $('#chatPanel').classList.toggle('open', chatOpen);
+                if (chatOpen) { renderChatComIA(); updateChatBadge(); setTimeout(() => $('#chatInput').focus(), 300); }
+            }
+
+            function updateChatBadge() {
+                const ms = getStorage(KEYS.CHAT);
+                const b = $('#chatBadge');
+                if (!b) return;
+                if (!chatOpen && ms.length > 0) { b.textContent = ms.length > 9 ? '9+' : ms.length; b.classList.remove('hidden'); }
+                else b.classList.add('hidden');
+            }
+
+            // ==========================================================
+            // ATTACH
+            // ==========================================================
+            function attachPageEvents(k) {
+                if (k === 'ops_pcp') {
+                    const b = $('#btnNovaOP');
+                    if (b) b.addEventListener('click', novaOP);
+                }
+                if (k === 'inicio') setTimeout(() => iniciarRelogio('relogioGestor'), 50);
+                if (k === 'inicio_operario') {
+                    setTimeout(() => iniciarRelogio('relogioOperario'), 50);
+                    const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                    const st = currentUser.setor === 'mistura' ? 'Em Mistura' : 'Em Envase';
+                    ops.filter(o => o.status === st && o.operadorAtual === currentUser.email).forEach(o => iniciarTempoDecorrido(o.id));
+                }
+            }
+
+            function iniciarRelogio(id) {
+                if (relogioIntervals[id]) clearInterval(relogioIntervals[id]);
+                function at() {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    const a = new Date();
+                    const t = el.querySelector('.clock-time');
+                    const d = el.querySelector('.clock-date');
+                    if (t) t.textContent = a.toLocaleTimeString('pt-BR');
+                    if (d) d.textContent = a.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+                }
+                at();
+                relogioIntervals[id] = setInterval(at, 1000);
+            }
+
+            // ==========================================================
+            // NOVA OP
+            // ==========================================================
+            function novaOP() {
+                if (currentUser.cargo !== 'pcp' && currentUser.cargo !== 'admin') return;
+                const n = 'OP-' + new Date().getFullYear() + '-' + String(getStorage(KEYS.OPS).length + 1).padStart(3, '0');
+                openModal(`
+                    <div class="modal-header"><h3><i class="fas fa-clipboard-list"></i> Nova OP</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <form onsubmit="salvarOP(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nº OP *</label><input type="text" name="numero" required value="${n}"></div>
+                            <div class="form-group"><label>Produto *</label><select name="produto" required>${Object.keys(CATALOGO).map(p => `<option>${p}</option>`).join('')}</select></div>
+                            <div class="form-group"><label>Quantidade *</label><input type="number" name="quantidade" min="1" required value="100"></div>
+                            <div class="form-group"><label>Lote *</label><input type="text" name="lote" required value="LOTE-${Date.now().toString().slice(-6)}"></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Gerar</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        </div>
+                    </form>
+                `);
+            }
+
+            window.salvarOP = function(e) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ops = getStorage(KEYS.OPS);
+                ops.push({
+                    id: gerarId(), numero: d.numero, produto: d.produto,
+                    quantidade: parseInt(d.quantidade), lote: d.lote,
+                    criadoEm: new Date().toISOString(), criadoPor: currentUser.nome,
+                    status: 'Aguardando Mistura',
+                    historico: [{ setor: currentUser.nome, acao: 'OP criada', timestamp: new Date().toISOString() }]
+                });
+                setStorage(KEYS.OPS, ops);
+                registrarLog('OP Criada', `${d.numero}`, 'verde');
+                closeModal();
+                renderPage(currentPage);
+            };
+
+            // ==========================================================
+            // MODAL
+            // ==========================================================
+            function openModal(html, large = false) {
+                $('#modalContent').innerHTML = html;
+                $('#modalContent').className = 'modal' + (large ? ' modal-lg' : '');
+                $('#modalOverlay').classList.remove('hidden');
+            }
+            window.closeModal = function() {
+                $('#modalOverlay').classList.add('hidden');
+                $('#modalContent').innerHTML = '';
+            };
+
+            // ==========================================================
+            // SEED (mantém compatibilidade com dados legados)
+            // ==========================================================
+            function seedData() {
+                if (getStorage(KEYS.USUARIOS).length === 0) setStorage(KEYS.USUARIOS, USUARIOS_DEFAULT);
+                if (getStorage(KEYS.MISTURADORES).length === 0) setStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                if (getStorage(KEYS.PERDAS).length === 0) setStorage(KEYS.PERDAS, []);
+                if (getStorage(KEYS.LOGS).length === 0) setStorage(KEYS.LOGS, []);
+                if (getStorage(KEYS.PRODUTOS).length === 0) {
+                    const prods = Object.entries(CATALOGO).map(([nome, c], i) => ({
+                        id: 'p' + (i + 1), codigo: c.codigo, nome, categoria: c.categoria,
+                        estoque: c.estoque, preco: c.preco
+                    }));
+                    setStorage(KEYS.PRODUTOS, prods);
+                }
+                if (getStorage(KEYS.OPS).length === 0) {
+                    setStorage(KEYS.OPS, [
+                        { id: gerarId(), numero: 'OP-2025-001', produto: 'Massa para Drywall 20kg', quantidade: 500, lote: 'LOTE-2025-001', criadoEm: new Date().toISOString(), criadoPor: 'Sistema', status: 'Aguardando Mistura', historico: [] },
+                        { id: gerarId(), numero: 'OP-2025-002', produto: 'Massa para Junta 18kg', quantidade: 300, lote: 'LOTE-2025-002', criadoEm: new Date().toISOString(), criadoPor: 'Sistema', status: 'Aguardando Mistura', historico: [] }
+                    ]);
+                }
+                if (getStorage(KEYS.LOTES).length === 0) setStorage(KEYS.LOTES, []);
+                if (getStorage(KEYS.ENTRADAS).length === 0) setStorage(KEYS.ENTRADAS, []);
+                if (getStorage(KEYS.SAIDAS).length === 0) setStorage(KEYS.SAIDAS, []);
+                if (getStorage(KEYS.CHAT).length === 0) setStorage(KEYS.CHAT, []);
+            }
+
+            // ==========================================================
+            // BIND / INIT
+            // ==========================================================
+            function bindEvents() {
+                $('#btnLogin').addEventListener('click', performLogin);
+                $('#loginPassword').addEventListener('keypress', e => { if (e.key === 'Enter') performLogin(); });
+                $('#btnLogout').addEventListener('click', performLogout);
+                $('#chatToggle').addEventListener('click', toggleChat);
+                $('#btnSendMessage').addEventListener('click', sendChatMessageComIA);
+                $('#chatInput').addEventListener('keypress', e => { if (e.key === 'Enter') sendChatMessageComIA(); });
+                $('#modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') closeModal(); });
+                window.addEventListener('storage', e => {
+                    if (!currentUser) return;
+                    if (e.key && e.key.startsWith('multiperfil_')) {
+                        renderPage(currentPage);
+                        renderChatComIA();
+                        updateChatBadge();
+                    }
+                });
+                document.addEventListener('click', e => {
+                    if (!chatOpen) return;
+                    const p = $('#chatPanel'), t = $('#chatToggle');
+                    if (!p.contains(e.target) && !t.contains(e.target)) { chatOpen = false; p.classList.remove('open'); }
+                });
+            }
+
+            function init() {
+                seedData();
+                popularLogin();
+                bindEvents();
+                window.switchPage = switchPage;
+                if (!PA_CONFIGURADO) console.warn('⚠️ Power Automate não configurado');
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
