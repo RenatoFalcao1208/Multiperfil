@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiperfil • Sistema de Produção v9.1</title>
+    <title>Multiperfil • Sistema de Produção v9.2</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
@@ -383,6 +383,8 @@
         .mb-2 { margin-bottom: 1rem; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -438,7 +440,7 @@
         <nav class="nav-tabs" id="navTabs"></nav>
         <main class="content-area" id="contentArea"></main>
         <footer>
-            <i class="fas fa-leaf"></i> Multiperfil • Construção a seco • Sistema de Produção v9.1 • Compatível com versões anteriores
+            <i class="fas fa-leaf"></i> Multiperfil • Construção a seco • Sistema de Produção v9.2 • Compatível com versões anteriores
         </footer>
     </div>
 
@@ -2566,6 +2568,315 @@
                 window.switchPage = switchPage;
                 if (!PA_CONFIGURADO) console.warn('⚠️ Power Automate não configurado');
             }
+
+
+            // ==========================================================
+            // v9.2 — ALMOXARIFADO • LIBERAÇÃO PCP • OBSERVAÇÕES • PLANEJAMENTO • PDF DA OP
+            // ==========================================================
+            FLUXO_OP.unshift(
+                { status: 'Em Almoxarifado', label: 'Almoxarifado', icon: 'fa-warehouse', setor: 'almoxarifado' },
+                { status: 'Aguardando Liberação PCP', label: 'Liberação PCP', icon: 'fa-stamp', setor: 'pcp' });
+            PAGINAS.almoxarifado = { label: 'Almoxarifado', icon: 'fa-warehouse' };
+            PAGINAS.planejamento = { label: 'Planejamento', icon: 'fa-chart-line' };
+            CARGOS.estoque.paginas.splice(1, 0, 'almoxarifado', 'planejamento');
+            CARGOS.admin.paginas.splice(1, 0, 'almoxarifado', 'planejamento');
+            CARGOS.pcp.paginas.splice(2, 0, 'planejamento');
+
+            const OBS_CARGOS = ['laboratorista', 'pcp', 'tecnico_quimica', 'admin'];
+            const K_MP = 'multiperfil_mp_v9', K_META = 'multiperfil_meta_v9';
+            const fdt = d => d ? formatDateTime(d) : '-';
+            const fmtN = x => x.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+            function dur(a, b) {
+                if (!a || !b) return '-';
+                const m = Math.round((new Date(b) - new Date(a)) / 60000);
+                return m < 0 ? '-' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'min';
+            }
+            function mutarOP(id, fn) {
+                const ops = getStorage(KEYS.OPS), op = ops.find(o => o.id === id);
+                if (!op) return null;
+                op.historico = op.historico || [];
+                fn(op); setStorage(KEYS.OPS, ops); return op;
+            }
+            // Fórmula do catálogo = quantidade POR UNIDADE produzida; total = por unidade x quantidade da OP
+            function itensMP(op) {
+                const c = CATALOGO[op.produto];
+                return c ? c.mistura.itens.map(i => {
+                    const m = String(i.quantidade).match(/([\d.,]+)\s*(.*)/);
+                    return { nome: i.nome, porUn: i.quantidade, n: m ? parseFloat(m[1].replace(',', '.')) * op.quantidade : 0, u: m ? m[2].trim() : '' };
+                }) : [];
+            }
+
+            // ---------- NOVA OP: nasce no Almoxarifado ----------
+            window.salvarOP = function(e) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target));
+                const ops = getStorage(KEYS.OPS), ts = new Date().toISOString();
+                ops.push({ id: gerarId(), numero: d.numero, produto: d.produto, quantidade: parseInt(d.quantidade), lote: d.lote,
+                    criadoEm: ts, criadoPor: currentUser.nome, criadoCargo: currentUser.cargoLabel, status: 'Em Almoxarifado',
+                    historico: [{ setor: currentUser.nome, acao: 'OP criada - enviada ao Almoxarifado', timestamp: ts }] });
+                setStorage(KEYS.OPS, ops);
+                registrarLog('OP Criada', d.numero, 'verde');
+                closeModal(); renderPage(currentPage);
+            };
+
+            // ---------- ALMOXARIFADO ----------
+            function pageAlmox() {
+                const ops = getStorage(KEYS.OPS);
+                const pend = ops.filter(o => o.status === 'Em Almoxarifado');
+                const feitas = ops.filter(o => o.almoxarifado).slice(-10).reverse();
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-warehouse"></i> Almoxarifado - Separação de Matéria-Prima</div></div>
+                    ${pend.length ? pend.map(o => `<div class="op-card"><div class="op-card-header"><div>
+                        <div class="op-card-numero">${escapeHtml(o.numero)}</div><div class="op-card-produto"><strong>${escapeHtml(o.produto)}</strong></div>
+                        <div class="text-small mt-1">Qtd: ${o.quantidade} | Lote: ${escapeHtml(o.lote)}</div></div><div class="op-card-badge">Aguardando separação</div></div>
+                        <button class="btn btn-primary btn-xl" onclick="abrirAlmox('${o.id}')"><i class="fas fa-dolly"></i> Separar e Dar Saída</button></div>`).join('')
+                    : '<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--verde)"></i><p>Nenhuma OP aguardando o almoxarifado</p></div>'}</div>
+                    <div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-history"></i> Últimas saídas</div></div>
+                    <div class="table-responsive"><table><thead><tr><th>OP</th><th>Saída</th><th>Responsável</th><th>Tempo no setor</th><th>PDF</th></tr></thead><tbody>
+                    ${feitas.map(o => `<tr><td><strong>${escapeHtml(o.numero)}</strong></td><td>${fdt(o.almoxarifado.saida)}</td><td>${escapeHtml(o.almoxarifado.responsavel)}</td><td>${dur(o.criadoEm, o.almoxarifado.saida)}</td>
+                    <td><button class="btn btn-sm btn-secondary" onclick="gerarPDF('${o.id}')"><i class="fas fa-file-pdf"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="text-small">Nenhuma saída registrada</td></tr>'}
+                    </tbody></table></div></div>`;
+            }
+            window.abrirAlmox = function(id) {
+                if (!['estoque', 'admin'].includes(currentUser.cargo)) { alert('Acesso restrito ao Almoxarifado.'); return; }
+                const op = getStorage(KEYS.OPS).find(o => o.id === id); if (!op) return;
+                openModal(`<div class="modal-header"><h3><i class="fas fa-warehouse"></i> Almoxarifado - ${escapeHtml(op.numero)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+                    <div class="alert alert-info"><i class="fas fa-info-circle"></i><div>${escapeHtml(op.produto)} - ${op.quantidade} un. Informe a origem (empresa) e a NF/lote de cada matéria-prima. O horário de saída é registrado ao confirmar.</div></div>
+                    <form onsubmit="salvarAlmox(event,'${id}')"><div class="table-responsive"><table>
+                    <thead><tr><th>Matéria-prima</th><th>Necessário</th><th>Empresa / Fornecedor *</th><th>NF / Lote MP *</th></tr></thead><tbody>
+                    ${itensMP(op).map((i, k) => `<tr><td><strong>${escapeHtml(i.nome)}</strong></td><td>${fmtN(i.n)} ${escapeHtml(i.u)}</td>
+                        <td><input name="f${k}" required style="width:100%"></td><td><input name="n${k}" required style="width:100%"></td></tr>`).join('')}
+                    </tbody></table></div>
+                    <div class="form-actions"><button type="submit" class="btn btn-success btn-xl"><i class="fas fa-sign-out-alt"></i> Confirmar Saída do Almoxarifado</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button></div></form>`, true);
+            };
+            window.salvarAlmox = function(e, id) {
+                e.preventDefault();
+                const d = Object.fromEntries(new FormData(e.target)), ts = new Date().toISOString();
+                const op = mutarOP(id, o => {
+                    o.almoxarifado = { saida: ts, responsavel: currentUser.nome, cargo: currentUser.cargoLabel,
+                        materiais: itensMP(o).map((i, k) => ({ nome: i.nome, qtd: fmtN(i.n) + ' ' + i.u, fornecedor: d['f' + k], nf: d['n' + k] })) };
+                    o.status = 'Aguardando Liberação PCP';
+                    o.historico.push({ setor: currentUser.nome, acao: 'Saída do Almoxarifado', timestamp: ts });
+                });
+                if (op) registrarLog('Saída do Almoxarifado', op.numero, 'verde');
+                closeModal(); renderPage(currentPage);
+            };
+
+            // ---------- PCP: LISTA + LIBERAÇÃO ----------
+            pageOPsPCP = function() {
+                const ops = getStorage(KEYS.OPS).map(normalizarStatusOP);
+                const pcp = ['pcp', 'admin'].includes(currentUser.cargo);
+                const nLib = ops.filter(o => o.status === 'Aguardando Liberação PCP').length;
+                return `<div class="alert alert-info"><i class="fas fa-info-circle"></i><strong>Fluxo:</strong>&nbsp;PCP → Almoxarifado → Liberação PCP → Mistura → Qualidade → Envase → Laboratório.</div>
+                    ${nLib ? `<div class="alert alert-warning"><i class="fas fa-stamp"></i><strong>${nLib} OP(s) aguardando liberação do PCP.</strong></div>` : ''}
+                    <div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-tasks"></i> Painel do PCP</div>
+                    <button class="btn btn-primary" id="btnNovaOP"><i class="fas fa-plus"></i> Nova OP</button></div>
+                    ${ops.length === 0 ? '<div class="empty-state"><p>Nenhuma OP</p></div>' : `<div class="table-responsive"><table>
+                    <thead><tr><th>Nº OP</th><th>Produto</th><th>Qtd</th><th>Lote</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+                    ${ops.map(o => `<tr><td><strong>${escapeHtml(o.numero)}</strong></td><td>${escapeHtml(o.produto)}</td><td>${o.quantidade}</td>
+                        <td><span class="badge">${escapeHtml(o.lote)}</span></td><td><span class="badge ${statusBadgeClass(o.status)}">${o.status}</span></td>
+                        <td><button class="btn btn-sm btn-secondary" title="Ver / Observações" onclick="verOP('${o.id}')"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-sm btn-primary" title="PDF da OP" onclick="gerarPDF('${o.id}')"><i class="fas fa-file-pdf"></i></button>
+                        ${pcp && o.status === 'Aguardando Liberação PCP' ? `<button class="btn btn-sm btn-success" onclick="liberarOP('${o.id}')"><i class="fas fa-stamp"></i> Liberar</button>` : ''}
+                        ${currentUser.podeRetroceder && !['Aguardando Mistura', 'Em Almoxarifado', 'Aguardando Liberação PCP'].includes(o.status) ? `<button class="btn btn-sm btn-danger" onclick="retrocederProcesso('${o.id}')"><i class="fas fa-undo"></i></button>` : ''}</td></tr>`).join('')}
+                    </tbody></table></div>`}</div>`;
+            };
+            window.liberarOP = function(id) {
+                if (!['pcp', 'admin'].includes(currentUser.cargo)) { alert('Somente o PCP pode liberar a OP.'); return; }
+                if (!confirm('Liberar esta OP para a Mistura?')) return;
+                const ts = new Date().toISOString();
+                const op = mutarOP(id, o => {
+                    o.liberacao = { por: currentUser.nome, cargo: currentUser.cargoLabel, timestamp: ts };
+                    o.status = 'Aguardando Mistura';
+                    o.historico.push({ setor: currentUser.nome, acao: 'OP liberada pelo PCP para Mistura', timestamp: ts });
+                });
+                if (op) registrarLog('OP Liberada (PCP)', op.numero, 'verde');
+                renderPage(currentPage);
+            };
+
+            // ---------- OBSERVAÇÕES + BOTÕES PDF NO DETALHE DA OP ----------
+            window.salvarObs = function(id) {
+                const t = document.getElementById('obsTexto');
+                if (!t || !t.value.trim() || !OBS_CARGOS.includes(currentUser.cargo)) return;
+                const ts = new Date().toISOString();
+                mutarOP(id, o => {
+                    (o.obs = o.obs || []).push({ autor: currentUser.nome, cargo: currentUser.cargoLabel, texto: t.value.trim(), ts });
+                    o.historico.push({ setor: currentUser.nome, acao: 'Observação registrada', timestamp: ts });
+                });
+                verOP(id);
+            };
+            const _verOP = window.verOP;
+            window.verOP = function(id) {
+                _verOP(id);
+                const op = getStorage(KEYS.OPS).find(o => o.id === id), fa = document.querySelector('#modalContent .form-actions');
+                if (!op || !fa) return;
+                const lista = (op.obs || []).map(x => `<div class="alert alert-info" style="margin-bottom:6px"><i class="fas fa-comment"></i><div><strong>${escapeHtml(x.autor)}</strong> <span class="text-small">(${escapeHtml(x.cargo)} • ${fdt(x.ts)})</span><br>${escapeHtml(x.texto)}</div></div>`).join('');
+                fa.insertAdjacentHTML('beforebegin', `<h4 style="color:var(--azul-escuro);margin:1rem 0 .5rem"><i class="fas fa-comments"></i> Observações</h4>
+                    ${lista || '<div class="text-small">Nenhuma observação.</div>'}
+                    ${OBS_CARGOS.includes(currentUser.cargo) ? `<div class="form-group mt-2"><textarea id="obsTexto" rows="2" placeholder="Escreva uma observação sobre esta OP..."></textarea></div>
+                    <button class="btn btn-secondary btn-sm" onclick="salvarObs('${id}')"><i class="fas fa-plus"></i> Adicionar observação</button>` : ''}`);
+                fa.insertAdjacentHTML('afterbegin', `<button class="btn btn-primary" onclick="gerarPDF('${id}')"><i class="fas fa-file-pdf"></i> Salvar PDF</button>
+                    <button class="btn btn-primary" onclick="gerarPDF('${id}', true)"><i class="fas fa-print"></i> Imprimir</button>`);
+            };
+            // atalho "Ver OP / Obs." nas telas de Laboratório e Qualidade
+            const addVer = h => h.replace(/<button class="btn (?:btn-success|btn-roxo btn-xl)" onclick="(?:abrirLaboratorio|abrirQualidade)\('([^']+)'\)"/g,
+                (m, id) => `<button class="btn btn-secondary" onclick="verOP('${id}')"><i class="fas fa-eye"></i> Ver OP / Obs.</button> ` + m);
+            const _pl = pageLaboratorio; pageLaboratorio = () => addVer(_pl());
+            const _pq = pageQualidade; pageQualidade = () => addVer(_pq());
+
+            // ---------- QUALIDADE: peso do balde, adesão de fita, grupo químico ----------
+            const _abrirQ = window.abrirQualidade;
+            window.abrirQualidade = function(id) {
+                _abrirQ(id);
+                const a = document.querySelector('#modalContent textarea[name=observacoes]');
+                if (!a) return;
+                a.closest('.form-group').insertAdjacentHTML('beforebegin', `
+                    <div class="form-group"><label>Peso do Balde na Pesagem (kg) *</label><input type="number" name="pesoBalde" step="0.01" min="0" required></div>
+                    <div class="form-group"><label>Teste de Adesão de Fita *</label><select name="adesaoFita" required><option value="">Selecione</option><option>Aprovado</option><option>Reprovado</option></select></div>
+                    <div class="form-group"><label>Grupo Químico *</label><select name="grupoQuimico" required><option value="">Selecione</option><option>Grupo A</option><option>Grupo B</option><option>Grupo C</option></select></div>`);
+            };
+
+            // ---------- PLANEJAMENTO: produzir x comprar ----------
+            function pagePlan() {
+                const abertas = getStorage(KEYS.OPS).filter(o => o.status !== 'Encerrada');
+                const mp = getStorage(K_MP, {}), meta = getStorage(K_META, {}), prods = getStorage(KEYS.PRODUTOS);
+                const nec = {};
+                abertas.forEach(o => itensMP(o).forEach(i => { const k = i.nome + '|' + i.u; (nec[k] = nec[k] || { nome: i.nome, u: i.u, n: 0 }).n += i.n; }));
+                const linhasP = Object.keys(CATALOGO).map(nome => {
+                    const est = (prods.find(p => p.nome === nome) || {}).estoque || 0;
+                    const emProd = abertas.filter(o => o.produto === nome).reduce((s, o) => s + o.quantidade, 0);
+                    const m = meta[nome] != null ? meta[nome] : 100, falta = Math.max(0, m - est - emProd);
+                    return `<tr><td><strong>${escapeHtml(nome)}</strong></td><td>${est}</td><td>${emProd}</td>
+                        <td>${m} <button class="btn btn-sm btn-secondary" onclick="editarMeta('${encodeURIComponent(nome)}')"><i class="fas fa-pen"></i></button></td>
+                        <td><span class="badge ${falta ? 'badge-warning' : 'badge-success'}">${falta ? 'Produzir ' + falta : 'OK'}</span></td></tr>`;
+                }).join('');
+                const linhasM = Object.entries(nec).map(([k, r]) => {
+                    const est = mp[k] || 0, comprar = Math.max(0, r.n - est);
+                    return `<tr><td><strong>${escapeHtml(r.nome)}</strong></td><td>${escapeHtml(r.u)}</td><td>${fmtN(r.n)}</td>
+                        <td>${fmtN(est)} <button class="btn btn-sm btn-secondary" onclick="editarMP('${encodeURIComponent(k)}')"><i class="fas fa-pen"></i></button></td>
+                        <td><span class="badge ${comprar ? 'badge-warning' : 'badge-success'}">${comprar ? 'Comprar ' + fmtN(comprar) + ' ' + escapeHtml(r.u) : 'OK'}</span></td></tr>`;
+                }).join('') || '<tr><td colspan="5" class="text-small">Nenhuma OP em aberto</td></tr>';
+                return `<div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-box"></i> Produto Final - quanto produzir</div></div>
+                    <div class="text-small" style="margin-bottom:.5rem">A produzir = Meta de estoque − Estoque atual − Em produção (OPs abertas).</div>
+                    <div class="table-responsive"><table><thead><tr><th>Produto</th><th>Estoque</th><th>Em produção</th><th>Meta</th><th>Situação</th></tr></thead><tbody>${linhasP}</tbody></table></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title"><i class="fas fa-cubes"></i> Matéria-Prima - quanto comprar</div></div>
+                    <div class="text-small" style="margin-bottom:.5rem">Necessidade calculada sobre todas as OPs ainda não encerradas. Clique no lápis para informar o estoque atual.</div>
+                    <div class="table-responsive"><table><thead><tr><th>Matéria-prima</th><th>Unid.</th><th>Necessário</th><th>Em estoque</th><th>Situação</th></tr></thead><tbody>${linhasM}</tbody></table></div></div>`;
+            }
+            window.editarMeta = function(n) {
+                const nome = decodeURIComponent(n), meta = getStorage(K_META, {});
+                const v = prompt('Meta de estoque (unidades) para ' + nome + ':', meta[nome] != null ? meta[nome] : 100);
+                if (v === null || isNaN(parseFloat(v))) return;
+                meta[nome] = parseFloat(v); setStorage(K_META, meta); renderPage(currentPage);
+            };
+            window.editarMP = function(k0) {
+                const k = decodeURIComponent(k0), mp = getStorage(K_MP, {});
+                const v = prompt('Estoque atual de ' + k.replace('|', ' (') + '):', mp[k] || 0);
+                if (v === null || isNaN(parseFloat(v.replace(',', '.')))) return;
+                mp[k] = parseFloat(v.replace(',', '.')); setStorage(K_MP, mp); renderPage(currentPage);
+            };
+            const _renderPage = renderPage;
+            renderPage = function(k) {
+                if (k === 'almoxarifado' || k === 'planejamento') {
+                    if (!currentUser || !currentUser.paginas.includes(k)) return;
+                    $('#contentArea').innerHTML = k === 'almoxarifado' ? pageAlmox() : pagePlan();
+                    return;
+                }
+                _renderPage(k);
+            };
+
+            // ---------- PDF DA OP ----------
+            window.gerarPDF = function(id, imprimir) {
+                const op = getStorage(KEYS.OPS).find(o => o.id === id);
+                if (!op) return;
+                if (!window.jspdf) { alert('Biblioteca de PDF não carregada. Verifique a internet e recarregue a página.'); return; }
+                const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+                const M = 12, T = s => (s == null || s === '' ? '-' : String(s).replace(/[^\u0000-\u00ff]/g, '').trim() || '-');
+                const R = op.registros || {}, mi = R.mistura, en = R.envase, q = op.qualidade, qd = (q && q.dados) || {};
+                const lab = op.laboratorio, al = op.almoxarifado, lib = op.liberacao;
+                const cat = CATALOGO[op.produto] || { mistura: { itens: [] }, envase: {} };
+                let y = 30;
+                const nova = h => { if (y + h > 282) { doc.addPage(); y = 14; } };
+                const titulo = t => { nova(16); doc.setFillColor(0, 80, 160); doc.rect(M, y, 186, 6.5, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.text(T(t), M + 2, y + 4.6); doc.setTextColor(30); y += 8.5; };
+                const tab = (head, body, extra) => { doc.autoTable(Object.assign({ startY: y, head: head ? [head] : undefined, body, theme: 'grid', margin: { left: M, right: M },
+                    styles: { fontSize: 8, cellPadding: 1.5, textColor: 30, lineColor: 200 }, headStyles: { fillColor: [114, 138, 156] } }, extra || {})); y = doc.lastAutoTable.finalY + 2; };
+                const kv = p => { const rows = []; for (let i = 0; i < p.length; i += 2) { const a = p[i], b = p[i + 1]; rows.push([T(a[0]), T(a[1]), b ? T(b[0]) : '', b ? T(b[1]) : '']); }
+                    const c = { fontStyle: 'bold', fillColor: [238, 243, 249], cellWidth: 34 }; tab(null, rows, { columnStyles: { 0: c, 2: c } }); };
+                const assin = (nome, cargo, ts) => { nova(18); doc.setDrawColor(60); doc.line(M, y + 9, M + 85, y + 9); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+                    doc.text('Assinatura do responsável: ' + T(nome) + (cargo ? ' (' + T(cargo) + ')' : ''), M, y + 12.5);
+                    doc.text(nome && ts ? 'Registrado digitalmente em ' + T(fdt(ts)) : 'PENDENTE', M + 100, y + 9); y += 17; };
+
+                // cabeçalho
+                doc.setFillColor(0, 80, 160); doc.rect(0, 0, 210, 24, 'F'); doc.setTextColor(255);
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('MULTIPERFIL', M, 11);
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text('Ordem de Produção - ficha completa do processo', M, 17);
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(T(op.numero), 198, 11, { align: 'right' });
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text('Impresso em ' + new Date().toLocaleString('pt-BR'), 198, 17, { align: 'right' });
+                doc.setTextColor(30);
+
+                titulo('IDENTIFICAÇÃO DA OP');
+                kv([['Nº OP', op.numero], ['Lote', op.lote], ['Produto', op.produto], ['Código', cat.codigo], ['Quantidade', op.quantidade + ' un.'], ['Status atual', op.status],
+                    ['Criada em', fdt(op.criadoEm)], ['Criada por (PCP)', op.criadoPor], ['Grupo Químico', qd.grupoQuimico], ['Misturador', mi?.inicio?.maquina]]);
+                assin(op.criadoPor, op.criadoCargo || 'PCP', op.criadoEm);
+
+                const qEnv = en?.dados ? parseInt(en.dados.quantidadeEnvasada) : null;
+                titulo('A. PRODUTO FINAL');
+                tab(['Produto', 'Código', 'Categoria', 'Embalagem', 'Qtd. planejada', 'Qtd. envasada', 'Diferença'],
+                    [[T(op.produto), T(cat.codigo), T(cat.categoria), T(cat.envase && cat.envase.unidade), op.quantidade, qEnv == null ? '-' : qEnv, qEnv == null ? '-' : op.quantidade - qEnv]]);
+
+                titulo('B. MATÉRIAS-PRIMAS (origem e quantidades)');
+                tab(['Matéria-prima', 'Por unidade', 'Total necessário', 'Origem (empresa / fornecedor)', 'NF / Lote MP'],
+                    itensMP(op).map((i, k) => { const m = al?.materiais?.[k]; return [T(i.nome), T(i.porUn), fmtN(i.n) + ' ' + T(i.u), T(m?.fornecedor), T(m?.nf)]; }));
+
+                titulo('ETAPA 1 - ALMOXARIFADO');
+                kv([['Entrada da OP', fdt(op.criadoEm)], ['Saída do almoxarifado', al ? fdt(al.saida) : 'Pendente'], ['Tempo no setor', dur(op.criadoEm, al?.saida)], ['Responsável', al?.responsavel]]);
+                assin(al?.responsavel, al?.cargo, al?.saida);
+
+                titulo('ETAPA 2 - LIBERAÇÃO DO PCP');
+                kv([['Aguardando desde', fdt(al?.saida)], ['Liberada em', lib ? fdt(lib.timestamp) : 'Pendente'], ['Tempo de espera', dur(al?.saida, lib?.timestamp)], ['Liberada por', lib?.por]]);
+                assin(lib?.por, lib?.cargo, lib?.timestamp);
+
+                titulo('ETAPA 3 - MISTURA');
+                kv([['Início', fdt(mi?.inicio?.timestamp)], ['Término', fdt(mi?.fim?.timestamp)], ['Tempo de mistura', mi?.fim?.tempoDecorrido], ['Operador', mi?.fim?.operador],
+                    ['Máquina', mi?.inicio?.maquina], ['Densidade ini. / fin.', mi?.dados ? mi.dados.densidadeInicial + ' / ' + mi.dados.densidadeFinal : null], ['pH', mi?.dados?.ph], ['Placas', mi?.dados?.placas]]);
+                assin(mi?.fim?.operador, 'Operador de Mistura', mi?.fim?.timestamp);
+
+                titulo('ETAPA 4 - ANÁLISE DE QUALIDADE');
+                kv([['Data/hora da análise', fdt(q?.timestamp)], ['Analista', q?.analisadoPor], ['Grupo Químico', qd.grupoQuimico], ['Resultado', q?.resultado],
+                    ['Viscosidade', qd.viscosidade], ['pH verificado', qd.phVerificado], ['Densidade verificada', qd.densidadeVerificada], ['Aspecto visual', qd.aspecto],
+                    ['Peso do balde (kg)', qd.pesoBalde], ['Adesão de fita', qd.adesaoFita], ['Obs. técnicas', qd.observacoes], ['', '']]);
+                assin(q?.analisadoPor, q?.cargo, q?.timestamp);
+
+                titulo('ETAPA 5 - ENVASE');
+                kv([['Início', fdt(en?.inicio?.timestamp)], ['Término', fdt(en?.fim?.timestamp)], ['Tempo de envase', en?.fim?.tempoDecorrido], ['Operador', en?.fim?.operador],
+                    ['Misturador', en?.dados?.misturador], ['Qtd. envasada', en?.dados?.quantidadeEnvasada]]);
+                assin(en?.fim?.operador, 'Operador de Envase', en?.fim?.timestamp);
+
+                titulo('ETAPA 6 - LABORATÓRIO / ENCERRAMENTO');
+                kv([['Data/hora', fdt(lab?.dataAnalise)], ['Analisado por', lab?.analisadoPor], ['Observações', lab?.observacoes], ['Status final', op.status]]);
+                assin(lab?.analisadoPor, 'Laboratório', lab?.dataAnalise);
+
+                titulo('TEMPO EM CADA SETOR');
+                const tp = (n, a, b) => [n, fdt(a), fdt(b), dur(a, b)];
+                tab(['Setor', 'Entrada', 'Saída', 'Tempo'], [
+                    tp('Almoxarifado', op.criadoEm, al?.saida), tp('Aguardando liberação PCP', al?.saida, lib?.timestamp),
+                    tp('Fila para Mistura', lib?.timestamp, mi?.inicio?.timestamp), tp('Mistura', mi?.inicio?.timestamp, mi?.fim?.timestamp),
+                    tp('Qualidade', mi?.fim?.timestamp, q?.timestamp), tp('Fila para Envase', q?.timestamp, en?.inicio?.timestamp),
+                    tp('Envase', en?.inicio?.timestamp, en?.fim?.timestamp), tp('Laboratório', en?.fim?.timestamp, lab?.dataAnalise),
+                    ['TEMPO TOTAL DA OP', fdt(op.criadoEm), lab ? fdt(lab.dataAnalise) : 'Em andamento', lab ? dur(op.criadoEm, lab.dataAnalise) : dur(op.criadoEm, Date.now()) + ' (até agora)']]);
+
+                titulo('OBSERVAÇÕES');
+                tab(['Data/hora', 'Autor', 'Cargo', 'Observação'], (op.obs || []).length ? op.obs.map(x => [fdt(x.ts), T(x.autor), T(x.cargo), T(x.texto)]) : [['-', '-', '-', 'Nenhuma observação registrada']]);
+
+                titulo('HISTÓRICO COMPLETO');
+                tab(['Data/hora', 'Responsável', 'Ação'], (op.historico || []).map(h => [fdt(h.timestamp), T(h.setor), T(h.acao)]));
+
+                const n = doc.getNumberOfPages();
+                for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(120);
+                    doc.text('Multiperfil • ' + T(op.numero) + ' • Página ' + p + ' de ' + n, 105, 291, { align: 'center' }); }
+                if (imprimir) { doc.autoPrint(); window.open(doc.output('bloburl'), '_blank'); }
+                else doc.save(String(op.numero).replace(/[^\w-]/g, '_') + '.pdf');
+            };
 
             init();
         })();
