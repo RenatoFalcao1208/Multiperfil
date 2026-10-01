@@ -1159,6 +1159,7 @@
                 const misturadores = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
                 const m = misturadores.find(x => x.id === id);
                 if (!m) return;
+                if (m.opAtual) { alert(`⛔ ${m.nome} está com a ${m.opAtual} em andamento. O operador precisa concluir antes de desligar.`); return; }
                 if (!confirm(`Desligar ${m.nome}?`)) return;
                 m.status = 'desligado'; m.operador = null; m.operadorNome = null;
                 m.opAtual = null; m.inicioUso = null;
@@ -1403,6 +1404,7 @@
                 const config = getConfigSetor(setor);
                 const misturadores = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
                 const minhaMaquina = misturadores.find(m => m.operador === currentUser.email);
+                const opAtiva = getOPAtivaOperador(currentUser.email);
 
                 let maquinaHtml = '';
                 if (minhaMaquina) {
@@ -1414,12 +1416,13 @@
                                 <div style="font-size:1.3rem; font-weight:800; color: var(--azul-escuro);">${escapeHtml(minhaMaquina.nome)}</div>
                                 <div class="text-small">Tempo em uso: <strong>${tempo}</strong></div>
                             </div>
-                            <button class="btn btn-danger" onclick="deslogarMaquina('${minhaMaquina.id}')"><i class="fas fa-power-off"></i> Encerrar Uso</button>
+                            <button class="btn btn-danger" onclick="deslogarMaquina('${minhaMaquina.id}')" ${opAtiva ? 'disabled title="Conclua a OP em andamento"' : ''}><i class="fas fa-power-off"></i> Encerrar Uso</button>
                         </div>
+                        ${opAtiva ? `<div class="alert alert-warning" style="margin:0.75rem 0 0;"><i class="fas fa-lock"></i> Para sair da máquina, conclua primeiro a <strong>${escapeHtml(opAtiva.numero)}</strong> em andamento.</div>` : ''}
                     </div>`;
                 } else {
                     const disp = misturadores.filter(m => !m.operador && m.status !== 'defeito' && m.status !== 'desligado');
-                    maquinaHtml = `<div class="card" style="background: var(--amarelo-claro); border-color: var(--amarelo);">
+                    maquinaHtml = `${opAtiva ? `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> A <strong>${escapeHtml(opAtiva.numero)}</strong> ainda está em andamento com você. Entre em uma máquina para concluí-la.</div>` : ''}<div class="card" style="background: var(--amarelo-claro); border-color: var(--amarelo);">
                         <div class="card-header"><div class="card-title"><i class="fas fa-exclamation-triangle"></i> Você não está em nenhuma máquina</div></div>
                         ${disp.length === 0 ? '<div class="alert alert-warning"><i class="fas fa-info-circle"></i> Nenhuma máquina disponível</div>' : `
                             <div class="form-group">
@@ -1439,6 +1442,10 @@
                     opsAguardando = ops.filter(o => o.status === 'Em Envase' && !o.operadorAtual);
                     opsEmAndamento = ops.filter(o => o.status === 'Em Envase' && o.operadorAtual === currentUser.email);
                 }
+                // Sem máquina: nada de OP para mexer (nem iniciar, nem terminar)
+                if (!minhaMaquina) opsEmAndamento = [];
+                // Já tem OP em andamento: não pode iniciar outra
+                const bloqueioNova = !minhaMaquina || !!opAtiva;
 
                 let listaAguardando = opsAguardando.length === 0
                     ? `<div class="empty-state"><i class="fas fa-check-circle" style="color: var(--verde);"></i><p>Nenhuma OP aguardando</p></div>`
@@ -1452,8 +1459,8 @@
                                 </div>
                                 <div class="op-card-badge">Aguardando</div>
                             </div>
-                            ${!minhaMaquina ? '<div class="alert alert-warning" style="margin-bottom:0.75rem;"><i class="fas fa-info-circle"></i> Registre-se em uma máquina primeiro</div>' : ''}
-                            <button class="btn btn-primary btn-xl" onclick="iniciarTrabalho('${o.id}')" ${!minhaMaquina ? 'disabled' : ''}><i class="fas fa-play"></i> Iniciar ${config.nomeTarefa}</button>
+                            ${!minhaMaquina ? '<div class="alert alert-warning" style="margin-bottom:0.75rem;"><i class="fas fa-info-circle"></i> Registre-se em uma máquina primeiro</div>' : (opAtiva ? '<div class="alert alert-warning" style="margin-bottom:0.75rem;"><i class="fas fa-lock"></i> Conclua a OP em andamento antes de iniciar outra</div>' : '')}
+                            <button class="btn btn-primary btn-xl" onclick="iniciarTrabalho('${o.id}')" ${bloqueioNova ? 'disabled' : ''}><i class="fas fa-play"></i> Iniciar ${config.nomeTarefa}</button>
                         </div>
                     `).join('');
 
@@ -1518,6 +1525,9 @@
                 const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
                 const m = ms.find(x => x.id === maquinaId);
                 if (!m) return;
+                if (m.operador !== currentUser.email) { alert('Você não está operando esta máquina.'); return; }
+                const ativa = getOPAtivaOperador(currentUser.email);
+                if (ativa) { alert(`⛔ Você está no meio da ${ativa.numero}. Conclua (Terminar) antes de sair da máquina.`); renderPage(currentPage); return; }
                 if (!confirm(`Encerrar uso de ${m.nome}?`)) return;
                 const tempo = m.inicioUso ? calcularTempoDecorrido(m.inicioUso) : '00:00:00';
                 m.operador = null; m.operadorNome = null; m.inicioUso = null;
@@ -1807,6 +1817,11 @@
                 if (!op) return;
                 const orig = op.status;
                 op.status = anterior;
+                if (op.operadorAtual) {
+                    const msR = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
+                    msR.forEach(mm => { if (mm.opAtual === op.numero) mm.opAtual = null; });
+                    setStorage(KEYS.MISTURADORES, msR);
+                }
                 delete op.operadorAtual;
                 op.historico = op.historico || [];
                 op.historico.push({ setor: currentUser.nome, acao: `🔴 RETROCESSO: ${orig} → ${anterior} | ${d.motivo} | ${d.tipoFalha}`, timestamp: new Date().toISOString(), tipo: 'retrocesso' });
@@ -1990,6 +2005,8 @@
                 const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
                 const minha = ms.find(m => m.operador === currentUser.email);
                 if (!minha) { alert('Registre-se em uma máquina primeiro.'); return; }
+                const ativa = getOPAtivaOperador(currentUser.email);
+                if (ativa) { alert(`Conclua a ${ativa.numero} antes de iniciar outra.`); return; }
                 const setor = currentUser.setor;
                 const config = getConfigSetor(setor, op);
                 const agora = new Date();
@@ -2025,6 +2042,10 @@
                 const setor = currentUser.setor;
                 const ms = getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
                 const minha = ms.find(m => m.operador === currentUser.email);
+                if (!minha) { closeModal(); alert('⛔ Você não está operando nenhuma máquina.'); renderPage(currentPage); return; }
+                if (getOPAtivaOperador(currentUser.email)) { closeModal(); alert('Conclua a OP em andamento antes de iniciar outra.'); renderPage(currentPage); return; }
+                const statusOk = setor === 'mistura' ? op.status === 'Aguardando Mistura' : (op.status === 'Em Envase' && !op.operadorAtual);
+                if (!statusOk) { closeModal(); alert('Esta OP não está mais disponível (outro operador pode ter iniciado).'); renderPage(currentPage); return; }
                 op.status = setor === 'mistura' ? 'Em Mistura' : 'Em Envase';
                 op.operadorAtual = currentUser.email;
                 op.inicioTrabalho = { hora, data, timestamp: ts, operador: currentUser.nome, setor, tempoMinimoSeg: getTempoMinimoSeg(op, setor), maquina: minha?.nome || null };
@@ -2037,6 +2058,21 @@
                 renderPage(currentPage);
                 iniciarTempoDecorrido(opId);
             };
+
+            // ---- TRAVA: operador só age se estiver numa máquina; só sai dela após concluir a OP ----
+            function getMinhaMaquina() {
+                if (!currentUser) return null;
+                return getStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT).find(m => m.operador === currentUser.email) || null;
+            }
+            function getOPAtivaOperador(email) {
+                return getStorage(KEYS.OPS).map(normalizarStatusOP).find(o =>
+                    (o.status === 'Em Mistura' || o.status === 'Em Envase') && o.operadorAtual === email) || null;
+            }
+            function exigirMaquina() {
+                const m = getMinhaMaquina();
+                if (!m) { alert('⛔ Você não está operando nenhuma máquina. Inicie a operação em uma máquina primeiro.'); return null; }
+                return m;
+            }
 
             function getConfigSetor(setor, op) {
                 const c = {
@@ -2067,6 +2103,8 @@
             window.abrirTelaTerminar = function(opId) {
                 const op = getStorage(KEYS.OPS).find(o => o.id === opId);
                 if (!op) return;
+                if (!exigirMaquina()) { renderPage(currentPage); return; }
+                if (op.operadorAtual !== currentUser.email) { alert('Esta OP não está em andamento com você.'); renderPage(currentPage); return; }
                 const setor = currentUser.setor;
                 const config = getConfigSetor(setor, op);
                 const falta = getTempoMinimoSeg(op, setor) - getSegDecorridos(op);
@@ -2114,6 +2152,7 @@
                 const ops = getStorage(KEYS.OPS);
                 const op = ops.find(o => o.id === opId);
                 if (!op) return;
+                if (!getMinhaMaquina() || op.operadorAtual !== currentUser.email) { closeModal(); alert('⛔ Ação não permitida: você não está operando a máquina desta OP.'); renderPage(currentPage); return; }
                 const setor = currentUser.setor;
                 op.fimTrabalho = { hora: horaFim, data: dataFim, timestamp: tsFim, operador: currentUser.nome, setor, tempoDecorrido: td };
                 op.registros = op.registros || {};
@@ -2511,6 +2550,49 @@
             // ==========================================================
             // SEED (mantém compatibilidade com dados legados)
             // ==========================================================
+            // Uma OP de exemplo em cada ponto do processo
+            function criarOPsExemplo() {
+                const ago = min => new Date(Date.now() - min * 60000).toISOString();
+                const hm = ts => new Date(ts).toLocaleTimeString('pt-BR'), dt = ts => new Date(ts).toLocaleDateString('pt-BR');
+                const base = (n, produto, qtd, status, minCriada) => ({
+                    id: 'demo-' + n, numero: 'OP-DEMO-00' + n, produto, quantidade: qtd, lote: 'LOTE-DEMO-00' + n,
+                    criadoEm: ago(minCriada), criadoPor: 'Sistema (exemplo)', criadoCargo: 'Sistema', status,
+                    historico: [{ setor: 'Sistema', acao: 'OP de exemplo criada', timestamp: ago(minCriada) }] });
+                const almox = ts => ({ saida: ts, responsavel: 'Almoxarife Exemplo', cargo: 'Estoque', materiais: [] });
+                const lib = ts => ({ por: 'Roberto Silva', cargo: 'PCP', timestamp: ts });
+                const reg = (setor, ini, fim, oper, maq, tempo, dados) => ({
+                    inicio: { hora: hm(ini), data: dt(ini), timestamp: ini, operador: oper, setor, maquina: maq },
+                    fim: { hora: hm(fim), data: dt(fim), timestamp: fim, operador: oper, setor, tempoDecorrido: tempo }, dados });
+                const mistDados = { densidadeInicial: '1.45', densidadeFinal: '1.52', ph: '8.2', placas: 'Aprovadas' };
+                const qual = ts => ({ analisadoPor: 'Dr. Marcos Pereira', cargo: 'Técnico em Química', timestamp: ts, resultado: 'Aprovado',
+                    dados: { resultado: 'Aprovado', grupoQuimico: 'Grupo A', viscosidade: '110', phVerificado: '8.2', densidadeVerificada: '1.52', aspecto: 'Conforme', pesoBalde: '28.4', adesaoFita: 'Aprovado', observacoes: 'Exemplo' } });
+
+                // 1) Almoxarifado
+                const o1 = base(1, 'Massa para Drywall 20kg', 200, 'Em Almoxarifado', 120);
+                // 2) Aguardando liberação do PCP
+                const o2 = base(2, 'Massa para Junta 18kg', 150, 'Aguardando Liberação PCP', 100);
+                o2.almoxarifado = almox(ago(90));
+                // 3) Mistura (aguardando operador; Selador tem tempo mínimo de só 5 min)
+                const o3 = base(3, 'Selador Acrílico 18L', 100, 'Aguardando Mistura', 80);
+                o3.almoxarifado = almox(ago(70)); o3.liberacao = lib(ago(60));
+                // 4) Qualidade
+                const o4 = base(4, 'Rejunte Flexível 15kg', 120, 'Em Qualidade', 70);
+                o4.almoxarifado = almox(ago(60)); o4.liberacao = lib(ago(50));
+                o4.registros = { mistura: reg('mistura', ago(45), ago(30), 'João Silva', 'Misturador 01', '00:15:00', mistDados) };
+                // 5) Envase
+                const o5 = base(5, 'Massa Corrida Acabamento 25kg', 80, 'Em Envase', 60);
+                o5.almoxarifado = almox(ago(55)); o5.liberacao = lib(ago(50));
+                o5.registros = { mistura: reg('mistura', ago(45), ago(30), 'João Silva', 'Misturador 01', '00:15:00', mistDados) };
+                o5.qualidade = qual(ago(20));
+                // 6) Laboratório
+                const o6 = base(6, 'Gesso Projetável 25kg', 60, 'Em Laboratório', 50);
+                o6.almoxarifado = almox(ago(48)); o6.liberacao = lib(ago(45));
+                o6.registros = { mistura: reg('mistura', ago(40), ago(28), 'João Silva', 'Misturador 01', '00:12:00', mistDados),
+                    envase: reg('envase', ago(15), ago(5), 'Maria Souza', 'Misturador 02', '00:10:00', { misturador: 'Misturador 02', quantidadeEnvasada: '60' }) };
+                o6.qualidade = qual(ago(25));
+                return [o1, o2, o3, o4, o5, o6];
+            }
+
             function seedData() {
                 if (getStorage(KEYS.USUARIOS).length === 0) setStorage(KEYS.USUARIOS, USUARIOS_DEFAULT);
                 if (getStorage(KEYS.MISTURADORES).length === 0) setStorage(KEYS.MISTURADORES, MISTURADORES_DEFAULT);
@@ -2523,11 +2605,9 @@
                     }));
                     setStorage(KEYS.PRODUTOS, prods);
                 }
-                if (getStorage(KEYS.OPS).length === 0) {
-                    setStorage(KEYS.OPS, [
-                        { id: gerarId(), numero: 'OP-2025-001', produto: 'Massa para Drywall 20kg', quantidade: 500, lote: 'LOTE-2025-001', criadoEm: new Date().toISOString(), criadoPor: 'Sistema', status: 'Aguardando Mistura', historico: [] },
-                        { id: gerarId(), numero: 'OP-2025-002', produto: 'Massa para Junta 18kg', quantidade: 300, lote: 'LOTE-2025-002', criadoEm: new Date().toISOString(), criadoPor: 'Sistema', status: 'Aguardando Mistura', historico: [] }
-                    ]);
+                if (!localStorage.getItem('multiperfil_demo_v92')) {
+                    setStorage(KEYS.OPS, getStorage(KEYS.OPS).concat(criarOPsExemplo()));
+                    localStorage.setItem('multiperfil_demo_v92', '1');
                 }
                 if (getStorage(KEYS.LOTES).length === 0) setStorage(KEYS.LOTES, []);
                 if (getStorage(KEYS.ENTRADAS).length === 0) setStorage(KEYS.ENTRADAS, []);
